@@ -1,0 +1,433 @@
+import { useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import { Skull } from 'lucide-react'
+import type { BattleUnit, Cell, Side } from '@/features/battle/battle-api'
+import { cellId, displayHp, toneText, type Float } from '@/features/battle/battle-events'
+import { CharacterSprite } from '@/features/game/character-art'
+import { classLabels, type CharacterClass, type StatBlock, type StatusType } from '@/features/game/game-api'
+import { statLabels, statOrder, statShort, statusLabels } from '@/features/game/game-labels'
+import { statusEffects } from '@/features/game/skill-text'
+import { cn } from '@/lib/cn'
+
+/** O que a célula mostra na hora de escolher a jogada. */
+export type CellMark = {
+  /** Dá para clicar (alvo, destino ou aliado para trocar). */
+  clickable?: boolean
+  /** Atingido pela opção em foco. */
+  hit?: boolean
+  /** Opção escolhida. */
+  selected?: boolean
+  /** Prévia curta (ex.: "-13 · 99%"). */
+  preview?: string
+}
+
+const statusShort: Record<StatusType, string> = {
+  STUN: 'ATR',
+  LOCK: 'TRV',
+  ROOT: 'PRE',
+  EXPOSE: 'EXP',
+  MARK: 'MAR',
+  DOT: 'DOT',
+  TAUNT: 'PRV',
+}
+
+/** Cor da etiqueta: controle em laranja, o que aumenta o dano recebido em vermelho, Provocado em roxo. */
+const statusTone: Record<StatusType, string> = {
+  STUN: 'bg-warning text-bg',
+  LOCK: 'bg-warning text-bg',
+  ROOT: 'bg-warning text-bg',
+  EXPOSE: 'bg-danger text-white',
+  MARK: 'bg-danger text-white',
+  DOT: 'bg-danger text-white',
+  TAUNT: 'bg-primary text-on-primary',
+}
+
+/** Segundos de atraso na respiração: cada uma das 8 unidades num ponto diferente do ciclo. */
+function breathDelay(ref: string) {
+  const [side, index] = ref.split(':')
+  return Number(index) * 0.85 + (side === 'OPPONENT' ? 0.4 : 0)
+}
+
+/** Quem caiu: a última célula e a arte, para o boneco ficar cinza no lugar. */
+export type Grave = { side: Side; cell: Cell; name: string; templateKey: string; characterClass: CharacterClass }
+
+/** As duas grades frente a frente: o jogador à esquerda (frente à direita), o inimigo à direita (frente à esquerda). */
+export function BattleBoard(props: {
+  units: BattleUnit[]
+  /** Última célula de quem caiu (das jogadas já reproduzidas): fica uma marca no lugar. */
+  ghosts: Map<string, Grave>
+  activeRef: string | null
+  marks: Map<string, CellMark>
+  floats: Float[]
+  /** Quem acabou de levar golpe (treme e pisca). */
+  impacted: Set<string>
+  hitId: number
+  /** Quem está agindo agora (avança na direção do inimigo). */
+  acting: { ref: string; id: number } | null
+  onCellClick: (side: Side, cell: Cell) => void
+  onCellHover: (side: Side, cell: Cell | null) => void
+  unitName: (ref: string) => string
+  /** Mostra o painel da unidade ao passar o mouse (desligado durante a animação). */
+  inspect: boolean
+  /** Stats fora da batalha dos seus personagens (por characterId), para comparar com os atuais. */
+  baseStats: Map<string, StatBlock>
+}) {
+  return (
+    <div className="flex items-center justify-center gap-4 sm:gap-6 2xl:gap-12">
+      <Grid side="PLAYER" {...props} />
+      <div className="flex flex-col items-center gap-2 self-stretch py-6" aria-hidden>
+        <span className="w-px flex-1 bg-linear-to-b from-transparent via-line-strong to-transparent" />
+        <span className="font-display text-2xl font-extrabold italic text-fg-subtle">VS</span>
+        <span className="w-px flex-1 bg-linear-to-b from-transparent via-line-strong to-transparent" />
+      </div>
+      <Grid side="OPPONENT" {...props} />
+    </div>
+  )
+}
+
+function Grid({ side, units, ghosts, activeRef, marks, floats, impacted, hitId, acting, onCellClick, onCellHover, unitName, inspect, baseStats }: Parameters<typeof BattleBoard>[0] & { side: Side }) {
+  // frente (coluna 0) sempre virada para o centro
+  const columns = side === 'PLAYER' ? [2, 1, 0] : [0, 1, 2]
+  const ally = side === 'PLAYER'
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-2 lg:gap-2.5">
+        {columns.map((column) => (
+          <span
+            key={column}
+            className={cn(
+              'text-center font-mono text-[9px] uppercase tracking-[0.2em]',
+              column === 0 ? (ally ? 'text-primary-soft' : 'text-danger-hover') : 'text-fg-subtle',
+            )}
+          >
+            {column === 0 ? 'Frente' : column === 1 ? 'Meio' : 'Fundo'}
+          </span>
+        ))}
+      </div>
+      <div className="grid grid-cols-3 gap-x-2 gap-y-6 lg:gap-x-2.5 short:gap-y-4" aria-label={ally ? 'Sua formação' : 'Formação inimiga'}>
+        {[0, 1, 2].flatMap((row) =>
+          columns.map((column) => {
+            const cell = { row, column }
+            const id = cellId(side, cell)
+            const unit = units.find((u) => u.side === side && u.alive && u.position?.row === row && u.position.column === column)
+            // quem caiu nesta jogada ainda tem a posição na cópia de exibição; os de antes vêm de ghosts
+            const fallen = units.find((u) => u.side === side && !u.alive && u.position?.row === row && u.position.column === column)
+            const ghost = unit ? undefined : (fallen ?? [...ghosts.values()].find((g) => g.side === side && g.cell.row === row && g.cell.column === column))
+            return (
+              <UnitCell
+                key={id}
+                side={side}
+                unit={unit}
+                ghost={ghost}
+                active={!!unit && unit.ref === activeRef}
+                mark={marks.get(id)}
+                floats={unit ? floats.filter((f) => f.ref === unit.ref) : []}
+                hitKey={unit && impacted.has(unit.ref) ? hitId : null}
+                attackKey={unit && acting?.ref === unit.ref ? acting.id : null}
+                onClick={() => onCellClick(side, cell)}
+                onHover={(on) => onCellHover(side, on ? cell : null)}
+                inspector={
+                  unit &&
+                  inspect && (
+                    <UnitInspector
+                      unit={unit}
+                      unitName={unitName}
+                      base={unit.characterId ? baseStats.get(unit.characterId) : undefined}
+                    />
+                  )
+                }
+              />
+            )
+          }),
+        )}
+      </div>
+    </div>
+  )
+}
+
+function UnitCell({ side, unit, ghost, active, mark, floats, hitKey, attackKey, onClick, onHover, inspector }: {
+  side: Side
+  unit?: BattleUnit
+  ghost?: Pick<Grave, 'name' | 'templateKey' | 'characterClass'>
+  active: boolean
+  mark?: CellMark
+  floats: Float[]
+  hitKey: number | null
+  attackKey: number | null
+  onClick: () => void
+  onHover: (on: boolean) => void
+  /** Painel com tudo da unidade, ao passar o mouse. */
+  inspector?: ReactNode
+}) {
+  const ally = side === 'PLAYER'
+  const hpPercent = unit ? Math.min(100, (unit.hp / unit.maxHp) * 100) : 0
+  const shieldPercent = unit ? Math.min(100, (unit.shield / unit.maxHp) * 100) : 0
+  const clickable = !!mark?.clickable
+  // posição da célula na tela para o painel da unidade (nulo = fechado)
+  const [anchor, setAnchor] = useState<DOMRect | null>(null)
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const enter = (e: { currentTarget: HTMLElement }) => {
+    onHover(true)
+    const el = e.currentTarget
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => setAnchor(el.getBoundingClientRect()), 150)
+  }
+  const leave = () => {
+    onHover(false)
+    clearTimeout(timer.current)
+    setAnchor(null)
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={clickable ? onClick : undefined}
+      onMouseEnter={enter}
+      onMouseLeave={leave}
+      onFocus={enter}
+      onBlur={leave}
+      aria-disabled={!clickable}
+      tabIndex={clickable ? 0 : -1}
+      aria-label={unit ? `${unit.name}, ${displayHp(unit.hp)} de ${displayHp(unit.maxHp)} HP` : 'Célula vazia'}
+      className={cn(
+        // em pé: o boneco cabe inteiro (~130 a 140px); em tela baixa encolhe para a barra de skills caber
+        'focus-ring relative block h-32 w-20 rounded-control border text-left transition-all duration-200 ease-out-soft sm:h-40 sm:w-24 2xl:h-44 2xl:w-26 short:sm:h-32 short:sm:w-21',
+        unit
+          ? ally
+            ? 'border-primary-soft/40 bg-primary/10'
+            : 'border-enemy/40 bg-enemy/10'
+          : 'border-silver/10 bg-white/2',
+        active && (ally ? 'border-primary-soft bg-primary/20 shadow-[0_0_30px_rgb(139_92_246/0.55)]' : 'border-enemy bg-enemy/20 shadow-glow-danger'),
+        clickable && 'cursor-pointer border-dashed hover:-translate-y-0.5',
+        clickable && (ally ? 'border-primary-soft/80' : 'border-danger-hover/80'),
+        mark?.hit && (ally ? 'ring-2 ring-primary-soft/70' : 'ring-2 ring-danger-hover/70'),
+        mark?.selected && 'ring-2 ring-silver-bright',
+        !clickable && 'cursor-default',
+        hitKey != null && 'z-20',
+      )}
+    >
+      {unit ? (
+        <>
+          <CharacterSprite
+            templateKey={unit.templateKey}
+            characterClass={unit.characterClass}
+            side={side}
+            active={active}
+            attackKey={attackKey}
+            hitKey={hitKey}
+            breathDelay={breathDelay(unit.ref)}
+          />
+          <span className="absolute top-1 left-1.5 font-mono text-[9px] text-fg-subtle">LV {unit.level}</span>
+          {/* plaquinha nos pés: nome, HP e escudo */}
+          <span className="absolute inset-x-0 bottom-0 block rounded-b-control bg-linear-to-t from-bg via-bg/90 to-transparent px-1.5 pt-2 pb-1">
+            <span className="flex items-baseline justify-between gap-1">
+              <span className="truncate font-display text-[13px] leading-none font-bold uppercase tracking-wide text-silver-bright">
+                {unit.name.split(' ')[0]}
+              </span>
+              <span className="shrink-0 font-mono text-[9px] text-fg-muted tabular-nums">
+                {displayHp(unit.hp)}
+                {unit.shield > 0 && <span className="text-info"> +{displayHp(unit.shield)}</span>}
+              </span>
+            </span>
+            <span className="mt-0.5 block h-1.5 overflow-hidden bg-overlay">
+              <span
+                className={cn('block h-full transition-[width] duration-300 ease-out-soft', ally ? 'bg-ally' : 'bg-enemy')}
+                style={{ width: `${hpPercent}%` }}
+              />
+            </span>
+            {shieldPercent > 0 && (
+              <span className="mt-px block h-0.5 bg-info transition-[width] duration-300" style={{ width: `${shieldPercent}%` }} />
+            )}
+          </span>
+          {/* Status e condições: etiquetas embaixo da célula (o detalhe fica no painel) */}
+          {(active || unit.statuses.length > 0 || unit.protectedBy || unit.engaged) && (
+            <span className="absolute inset-x-0 -bottom-2.5 flex flex-wrap justify-center gap-0.5">
+              {active && (
+                <span className={cn('px-1.5 font-mono text-[9px] leading-tight font-bold uppercase tracking-widest', ally ? 'bg-primary text-on-primary' : 'bg-enemy text-white')}>
+                  Vez
+                </span>
+              )}
+              {unit.statuses.map((s) => (
+                <span key={s} className={cn('px-1 font-mono text-[9px] leading-tight font-bold', statusTone[s])}>
+                  {statusShort[s]}
+                </span>
+              ))}
+              {unit.protectedBy && <span className="bg-info px-1 font-mono text-[9px] leading-tight font-bold text-bg">PROT</span>}
+              {unit.engaged && (
+                <span className="border border-line-strong bg-bg px-1 font-mono text-[9px] leading-tight font-bold text-fg-muted">ENG</span>
+              )}
+            </span>
+          )}
+          {inspector && anchor && <FloatingPanel anchor={anchor}>{inspector}</FloatingPanel>}
+        </>
+      ) : ghost ? (
+        // caído: o boneco cinza e apagado fica no lugar
+        <>
+          <CharacterSprite templateKey={ghost.templateKey} characterClass={ghost.characterClass} side={side} dead breathDelay={0} />
+          <span className="absolute inset-x-0 bottom-1 flex items-center justify-center gap-1 font-mono text-[9px] uppercase text-fg-subtle">
+            <Skull className="size-3" />
+            {ghost.name.split(' ')[0]}
+          </span>
+        </>
+      ) : (
+        <span className="absolute top-1/2 left-1/2 size-1 -translate-1/2 rounded-pill bg-silver/20" />
+      )}
+
+      {mark?.preview && (
+        // dentro da célula: acima dela fica o rótulo da coluna
+        <span className="absolute top-1 left-1/2 -translate-x-1/2 border border-line-strong bg-bg/90 px-1.5 py-px font-mono text-[10px] font-semibold whitespace-nowrap text-silver-bright">
+          {mark.preview}
+        </span>
+      )}
+
+      {floats.map((f) =>
+        f.big ? (
+          // palavra de impacto: maior, com fundo e o estouro; passa por cima das células vizinhas
+          <span
+            key={f.id}
+            className="pointer-events-none absolute top-1/4 left-1/2 z-30 -translate-x-1/2"
+          >
+            <span
+              className={cn(
+                'block animate-pop-up border border-current/40 bg-bg/90 px-2 py-0.5 font-display text-xl leading-none font-extrabold whitespace-nowrap uppercase italic shadow-panel',
+                toneText[f.tone],
+              )}
+            >
+              {f.text}
+            </span>
+          </span>
+        ) : (
+          <span
+            key={f.id}
+            className={cn(
+              'pointer-events-none absolute inset-x-0 top-1/3 z-30 animate-float-up text-center font-display text-2xl font-extrabold whitespace-nowrap italic drop-shadow-[0_2px_4px_rgb(0_0_0/0.9)]',
+              toneText[f.tone],
+            )}
+          >
+            {f.text}
+          </span>
+        ),
+      )}
+    </button>
+  )
+}
+
+type Condition = { label: string; short: string; text: string; tone: string }
+
+/** Tudo o que a API mostra da unidade: HP, escudo, status e o que fazem, condições e, nas suas, os stats atuais. */
+function UnitInspector({ unit, unitName, base }: {
+  unit: BattleUnit
+  unitName: (ref: string) => string
+  base?: StatBlock
+}) {
+  const ally = unit.side === 'PLAYER'
+  const conditions: Condition[] = []
+  if (unit.tauntedBy)
+    conditions.push({ label: 'Provocado', short: 'PRV', tone: statusTone.TAUNT, text: `por ${unitName(unit.tauntedBy)}: golpes de alvo único só podem mirar quem provocou.` })
+  if (unit.protectedBy)
+    conditions.push({ label: 'Protegido', short: 'PROT', tone: 'bg-info text-bg', text: `por ${unitName(unit.protectedBy)}: golpes de alvo único nele caem no protetor até o próximo turno dele.` })
+  if (unit.engaged)
+    conditions.push({ label: 'Engajado', short: 'ENG', tone: 'border border-line-strong text-fg-muted', text: 'na frente, encarando um Vanguarda, Guardião ou Executor: mover ou trocar custa o turno inteiro.' })
+  // Provocado já aparece como condição (com quem provocou)
+  const statuses = unit.statuses.filter((s) => !(s === 'TAUNT' && unit.tauntedBy))
+
+  return (
+    <span
+      role="tooltip"
+      className={cn('block w-72 border bg-surface p-3 text-left shadow-panel', ally ? 'border-primary-soft/50' : 'border-enemy/50')}
+    >
+      <span className="flex items-baseline justify-between gap-2">
+        <span className="font-display text-lg leading-tight font-bold uppercase tracking-wide text-silver-bright">{unit.name}</span>
+        <span className={cn('font-mono text-[10px] uppercase tracking-[0.14em]', ally ? 'text-primary-soft' : 'text-danger-hover')}>
+          {ally ? 'Aliado' : 'Inimigo'}
+        </span>
+      </span>
+      <span className="block font-mono text-[10px] text-fg-muted">
+        {classLabels[unit.characterClass]} · LV {unit.level} · {displayHp(unit.hp)}/{displayHp(unit.maxHp)} HP
+        {unit.shield > 0 && <span className="text-info"> · escudo {displayHp(unit.shield)}</span>}
+      </span>
+
+      <span className="mt-2.5 block space-y-1.5 border-t border-line/70 pt-2">
+        {statuses.length === 0 && conditions.length === 0 && <span className="block text-xs text-fg-subtle">Nenhum status ativo.</span>}
+        {statuses.map((s) => (
+          <span key={s} className="flex gap-2 text-xs leading-snug">
+            <span className={cn('h-fit shrink-0 px-1 font-mono text-[9px] font-bold', statusTone[s])}>{statusShort[s]}</span>
+            <span className="text-fg-muted">
+              <span className="font-semibold text-fg">{statusLabels[s]}</span>: {statusEffects[s]}.
+            </span>
+          </span>
+        ))}
+        {conditions.map((c) => (
+          <span key={c.label} className="flex gap-2 text-xs leading-snug">
+            <span className={cn('h-fit shrink-0 px-1 font-mono text-[9px] font-bold', c.tone)}>{c.short}</span>
+            <span className="text-fg-muted">
+              <span className="font-semibold text-fg">{c.label}</span> {c.text}
+            </span>
+          </span>
+        ))}
+      </span>
+
+      {ally && unit.stats ? (
+        <span className="mt-2.5 block border-t border-line/70 pt-2">
+          <span className="grid grid-cols-4 gap-x-2 gap-y-1">
+            {statOrder.map((stat) => {
+              const now = Math.round(unit.stats![stat])
+              const diff = base ? now - base[stat] : 0
+              return (
+                <span key={stat} className="font-mono text-[10px]" title={statLabels[stat]}>
+                  <span className="text-fg-subtle">{statShort[stat]} </span>
+                  <span className="text-fg tabular-nums">{now}</span>
+                  {diff !== 0 && (
+                    <span className={diff > 0 ? 'text-success' : 'text-danger-hover'}>
+                      {' '}
+                      {diff > 0 ? '+' : ''}
+                      {diff}
+                    </span>
+                  )}
+                </span>
+              )
+            })}
+          </span>
+          {base && (
+            <span className="mt-1.5 block text-[10px] leading-snug text-fg-subtle">
+              Comparado com fora da batalha: inclui campo, auras, buffs, debuffs e Desgaste.
+            </span>
+          )}
+        </span>
+      ) : (
+        !ally && (
+          <span className="mt-2.5 block border-t border-line/70 pt-2 text-[10px] leading-snug text-fg-subtle">
+            {unit.skills.length > 0 && `Skills vistas: ${unit.skills.map((sk) => sk.name).join(', ')}. `}
+            Os stats do inimigo ficam ocultos.
+          </span>
+        )
+      )}
+    </span>
+  )
+}
+
+const PANEL_WIDTH = 288 // w-72
+const GAP = 10
+const MARGIN = 8
+
+/**
+ * Painel preso à célula, fora da árvore da grade (portal no body, posição fixa): abre do lado com mais espaço,
+ * acima ou abaixo, e fica dentro da tela na horizontal.
+ */
+function FloatingPanel({ anchor, children }: { anchor: DOMRect; children: ReactNode }) {
+  const viewportW = window.innerWidth
+  const viewportH = window.innerHeight
+  const above = anchor.top >= viewportH - anchor.bottom
+  const left = Math.min(Math.max(anchor.left + anchor.width / 2 - PANEL_WIDTH / 2, MARGIN), viewportW - PANEL_WIDTH - MARGIN)
+  const style = above
+    ? { left, bottom: viewportH - anchor.top + GAP, maxHeight: anchor.top - GAP - MARGIN }
+    : { left, top: anchor.bottom + GAP, maxHeight: viewportH - anchor.bottom - GAP - MARGIN }
+
+  return createPortal(
+    <span className="pointer-events-none fixed z-60 block animate-fade-in overflow-y-auto" style={style}>
+      {children}
+    </span>,
+    document.body,
+  )
+}
