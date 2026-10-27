@@ -1,8 +1,8 @@
-import { useState, type ReactNode } from 'react'
-import { ArrowRight, ChevronRight, LayoutGrid, Play, Sparkles, Swords, type LucideIcon } from 'lucide-react'
+import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { ArrowRight, ChevronRight, History, LayoutGrid, Play, Sparkles, Swords, Users, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
-import { Carousel } from '@/components/ui/carousel'
+import { ArrowButton, Carousel } from '@/components/ui/carousel'
 import { buttonClasses } from '@/components/ui/button-classes'
 import { SectionTitle } from '@/components/layout/page'
 import { useMe } from '@/features/auth/auth-api'
@@ -19,8 +19,17 @@ import {
 import { CharacterPortrait, PortraitPop } from '@/features/game/character-art'
 import { cn } from '@/lib/cn'
 
-/** Arte de fundo do lobby (public/art). Sem o arquivo, entra a grade em perspectiva. */
-const LOBBY_ART = '/art/lobby-mascarado.jpg'
+/** Um destaque do carrossel do lobby: a arte de fundo (public/art; sem o arquivo, a grade em perspectiva) e o texto. */
+type Slide = {
+  key: string
+  /** Nome curto no indicador. */
+  name: string
+  art: string
+  eyebrow: string
+  title: [string, string]
+  text: ReactNode
+  actions: ReactNode
+}
 
 export function HomePage() {
   const { data: account } = useMe()
@@ -40,49 +49,82 @@ export function HomePage() {
       ? { to: '/batalhar', label: 'Batalhar' }
       : { to: '/esquadroes', label: 'Montar esquadrão' }
 
+  const slides: Slide[] = [
+    {
+      key: 'batalha',
+      name: 'Batalha',
+      art: '/art/lobby-batalha.jpg',
+      eyebrow: 'Área de batalha',
+      title: ['Domine', 'a grade'],
+      text: (
+        <>
+          Bem-vindo, <span className="font-semibold text-fg">{account?.displayName}</span>. Não vence o mais forte: vence quem
+          posiciona melhor. Leia o adversário e escolha cada jogada.
+        </>
+      ),
+      actions: (
+        <>
+          <Link
+            to={primaryCta.to}
+            aria-disabled={squads.isPending || battles.isPending}
+            className={buttonClasses({ size: 'lg', className: 'group' })}
+          >
+            <Swords className="size-5" />
+            {primaryCta.label}
+            <ArrowRight className="size-5 transition-transform duration-150 group-hover:translate-x-1" />
+          </Link>
+          <Link to="/historico" className={buttonClasses({ size: 'lg', variant: 'secondary' })}>
+            <History className="size-5" />
+            Histórico
+          </Link>
+        </>
+      ),
+    },
+    {
+      key: 'esquadroes',
+      name: 'Esquadrões',
+      art: '/art/lobby-mascarado.jpg',
+      eyebrow: 'Esquadrões',
+      title: ['Monte', 'a formação'],
+      text: 'Quatro personagens na grade 3x3. Quem segura a frente, quem age do fundo, quem protege quem: a formação decide a batalha antes do primeiro golpe.',
+      actions: (
+        <Link to="/esquadroes" className={buttonClasses({ size: 'lg', className: 'group' })}>
+          <LayoutGrid className="size-5" />
+          {hasSquad ? `Esquadrões · ${squads.data!.length}` : 'Montar esquadrão'}
+          <ArrowRight className="size-5 transition-transform duration-150 group-hover:translate-x-1" />
+        </Link>
+      ),
+    },
+    {
+      key: 'personagens',
+      name: 'Personagens',
+      art: '/art/banner-sunna.jpg',
+      eyebrow: 'Personagens',
+      title: ['Evolua', 'o elenco'],
+      text: 'Cada batalha dá experiência. A cada 5 níveis, um bloco de skill novo: escolha o que entra na build de cada personagem.',
+      actions: (
+        <>
+          <Link to="/personagens" className={buttonClasses({ size: 'lg', className: 'group' })}>
+            <Users className="size-5" />
+            Ver personagens
+            <ArrowRight className="size-5 transition-transform duration-150 group-hover:translate-x-1" />
+          </Link>
+          {!!offers.data?.length && (
+            <Link to={`/personagens/${offers.data[0].characterId}`} className={buttonClasses({ size: 'lg', variant: 'secondary' })}>
+              <Sparkles className="size-5" />
+              {offers.data.length} {offers.data.length === 1 ? 'bloco' : 'blocos'} de skill
+            </Link>
+          )}
+        </>
+      ),
+    },
+  ]
+
   return (
     <div className="pb-12">
       {/* Lobby */}
       <section className="relative isolate overflow-hidden border-b border-line">
-        <LobbyBackdrop />
-
-        <div className="relative mx-auto max-w-7xl px-6 pt-12 pb-8 lg:px-10 lg:pt-16">
-          <div className="flex flex-col justify-center">
-            <div className="flex flex-wrap items-center gap-3">
-              <Badge tone="primary">Temporada 0</Badge>
-              <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-fg-muted">
-                Formação. Leitura. Decisão.
-              </span>
-            </div>
-
-            <h1 className="mt-5 font-display text-7xl leading-[0.85] font-extrabold uppercase italic text-silver-bright sm:text-8xl xl:text-9xl">
-              Domine
-              <br />
-              <span className="text-gradient-primary pr-3">a grade</span>
-            </h1>
-
-            <p className="mt-6 max-w-md text-[15px] leading-relaxed text-fg-muted">
-              Bem-vindo, <span className="font-semibold text-fg">{account?.displayName}</span>. Não vence o mais forte: vence
-              quem posiciona melhor. Monte a formação, leia o adversário e escolha cada jogada.
-            </p>
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                to={primaryCta.to}
-                aria-disabled={squads.isPending || battles.isPending}
-                className={buttonClasses({ size: 'lg', className: 'group' })}
-              >
-                <Swords className="size-5" />
-                {primaryCta.label}
-                <ArrowRight className="size-5 transition-transform duration-150 group-hover:translate-x-1" />
-              </Link>
-              <Link to="/esquadroes" className={buttonClasses({ size: 'lg', variant: 'secondary' })}>
-                <LayoutGrid className="size-5" />
-                Esquadrões
-              </Link>
-            </div>
-          </div>
-        </div>
+        <LobbyHero slides={slides} />
 
         {/* Faixa de status, como os painéis de evento de um lobby */}
         <div className="relative mx-auto grid max-w-7xl gap-3 px-6 pb-10 md:grid-cols-3 lg:px-10">
@@ -169,23 +211,148 @@ export function HomePage() {
   )
 }
 
-// Fundo do lobby: arte (se existir) ou grade 3x3 em perspectiva, brilho roxo, quadriculado e palavra gigante vazada.
-function LobbyBackdrop() {
-  const [artLoaded, setArtLoaded] = useState(false)
+/**
+ * Carrossel de destaques no topo do lobby: a arte de fundo troca com fade, o texto desliza. Passa sozinho (a barra do
+ * slide enche e, no fim, vai para o próximo); pausa com o mouse ou o foco em cima e não roda com movimento reduzido.
+ * Setas, indicadores, ← → no teclado e arrastar no touch.
+ */
+function LobbyHero({ slides }: { slides: Slide[] }) {
+  const [index, setIndex] = useState(0)
+  const [paused, setPaused] = useState(false)
+  const swipeStart = useRef<number | null>(null)
+  const go = (next: number) => setIndex((next + slides.length) % slides.length)
+
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'ArrowLeft') go(index - 1)
+    if (event.key === 'ArrowRight') go(index + 1)
+  }
+
+  return (
+    <>
+      <LobbyBackdrop arts={slides.map((s) => s.art)} index={index} />
+
+      <div
+        role="region"
+        aria-roledescription="carrossel"
+        aria-label="Destaques"
+        className="relative mx-auto max-w-7xl touch-pan-y px-6 pt-12 pb-8 lg:px-10 lg:pt-16"
+        onKeyDown={onKeyDown}
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onFocus={() => setPaused(true)}
+        onBlur={() => setPaused(false)}
+        onPointerDown={(e) => (swipeStart.current = e.pointerType === 'mouse' ? null : e.clientX)}
+        onPointerUp={(e) => {
+          if (swipeStart.current == null) return
+          const delta = e.clientX - swipeStart.current
+          swipeStart.current = null
+          if (Math.abs(delta) > 50) go(index + (delta < 0 ? 1 : -1))
+        }}
+      >
+        {/* todos os slides na mesma célula: a altura é a do maior, nada pula ao trocar */}
+        <div className="grid">
+          {slides.map((slide, i) => {
+            const current = i === index
+            return (
+              <div
+                key={slide.key}
+                aria-roledescription="slide"
+                aria-label={`${i + 1} de ${slides.length}: ${slide.name}`}
+                aria-hidden={!current}
+                inert={!current}
+                className={cn(
+                  'flex flex-col justify-center [grid-area:1/1] transition-all duration-500 ease-out-soft',
+                  current ? 'translate-x-0 opacity-100' : 'pointer-events-none -translate-x-6 opacity-0',
+                )}
+              >
+                <div className="flex flex-wrap items-center gap-3">
+                  <Badge tone="primary">Temporada 0</Badge>
+                  <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-fg-muted">{slide.eyebrow}</span>
+                </div>
+
+                <h1 className="mt-5 font-display text-7xl leading-[0.85] font-extrabold uppercase italic text-silver-bright sm:text-8xl xl:text-9xl">
+                  {slide.title[0]}
+                  <br />
+                  <span className="text-gradient-primary pr-3">{slide.title[1]}</span>
+                </h1>
+
+                <p className="mt-6 max-w-md text-[15px] leading-relaxed text-fg-muted">{slide.text}</p>
+
+                <div className="mt-8 flex flex-wrap gap-3">{slide.actions}</div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* indicadores: número, nome e a barra que enche até a troca */}
+        <div className="mt-10 flex items-center gap-4">
+          <div className="flex flex-1 gap-2 sm:gap-3">
+            {slides.map((slide, i) => (
+              <button
+                key={slide.key}
+                type="button"
+                onClick={() => go(i)}
+                aria-label={`Ir para ${slide.name}`}
+                aria-current={i === index}
+                className="focus-ring group w-20 text-left sm:w-32"
+              >
+                <span className="flex items-baseline gap-2 font-mono text-[10px] uppercase tracking-[0.18em]">
+                  <span className={i === index ? 'text-primary-soft' : 'text-fg-subtle'}>{String(i + 1).padStart(2, '0')}</span>
+                  <span
+                    className={cn(
+                      'hidden truncate transition-colors sm:inline',
+                      i === index ? 'text-silver-bright' : 'text-fg-subtle group-hover:text-fg-muted',
+                    )}
+                  >
+                    {slide.name}
+                  </span>
+                </span>
+                <span className="mt-2 block h-[3px] overflow-hidden bg-line-strong">
+                  {i === index && (
+                    <span
+                      key={index}
+                      className={cn(
+                        'block h-full origin-left bg-primary shadow-[0_0_8px_var(--color-primary)] motion-safe:animate-slide-progress',
+                        paused && '[animation-play-state:paused]',
+                      )}
+                      onAnimationEnd={() => go(index + 1)}
+                    />
+                  )}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <ArrowButton direction="prev" disabled={false} onClick={() => go(index - 1)} />
+            <ArrowButton direction="next" disabled={false} onClick={() => go(index + 1)} />
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// Fundo do lobby: a arte do slide (se existir) ou grade 3x3 em perspectiva, brilho roxo, quadriculado e palavra vazada.
+function LobbyBackdrop({ arts, index }: { arts: string[]; index: number }) {
+  const [loaded, setLoaded] = useState<Record<string, boolean>>({})
+  const artLoaded = !!loaded[arts[index]]
 
   return (
     <div className="pointer-events-none absolute inset-0 -z-10 bg-bg">
-      <img
-        src={LOBBY_ART}
-        alt=""
-        onLoad={() => setArtLoaded(true)}
-        onError={(e) => (e.currentTarget.hidden = true)}
-        className={cn(
-          // ancorada no topo: a cabeça do personagem fica no alto da arte e não pode ser cortada
-          'absolute inset-y-0 right-0 h-full w-full object-cover object-[right_top] transition-opacity duration-700 ease-out-soft lg:w-3/4',
-          artLoaded ? 'opacity-100' : 'opacity-0',
-        )}
-      />
+      {arts.map((art, i) => (
+        <img
+          key={art}
+          src={art}
+          alt=""
+          onLoad={() => setLoaded((l) => ({ ...l, [art]: true }))}
+          onError={(e) => (e.currentTarget.hidden = true)}
+          className={cn(
+            // ancorada no topo: a cabeça do personagem fica no alto da arte e não pode ser cortada
+            'absolute inset-y-0 right-0 h-full w-full object-cover object-[right_top] transition-opacity duration-700 ease-out-soft lg:w-3/4',
+            i === index && loaded[art] ? 'opacity-100' : 'opacity-0',
+          )}
+        />
+      ))}
       {/* Sem arte: grade em perspectiva e quadriculado. Com arte: só o necessário para o texto ficar legível. */}
       {!artLoaded && <PerspectiveFormation />}
       {!artLoaded && <div className="absolute inset-0 bg-grid mask-[linear-gradient(to_bottom,black,transparent_85%)]" />}

@@ -96,7 +96,7 @@ export function Carousel({ label, children, className, viewportClassName }: {
   )
 }
 
-function ArrowButton({ direction, disabled, onClick }: { direction: 'prev' | 'next'; disabled: boolean; onClick: () => void }) {
+export function ArrowButton({ direction, disabled, onClick }: { direction: 'prev' | 'next'; disabled: boolean; onClick: () => void }) {
   const Icon = direction === 'prev' ? ChevronLeft : ChevronRight
   return (
     <button

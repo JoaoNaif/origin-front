@@ -33,10 +33,12 @@ Fontes gratuitas (OFL): Barlow Condensed (`font-display`, títulos e botões), I
   (avatar, ponto). Não usar `rounded-md`/`rounded-lg` soltos.
 - Títulos de página e seção: `PageHeader`, `Eyebrow`, `SectionTitle` (`src/components/layout/page.tsx`).
 - Arte: `public/art/`. Sem arquivo, o lobby mostra uma grade 3x3 em perspectiva. Todas as artes são 16:9, com o
-  personagem à direita e a esquerda vazia para o texto.
-  - `lobby-mascarado.jpg`: guerreiro mascarado, fundo do lobby (`LOBBY_ART` na home).
+  personagem à direita e a esquerda vazia para o texto. O topo do lobby é um carrossel de destaques (`LobbyHero` e
+  `slides` na home), um slide por área, cada um com a sua arte:
+  - `lobby-batalha.jpg`: slide Batalha do lobby.
+  - `lobby-mascarado.jpg`: guerreiro mascarado, slide Esquadrões do lobby.
   - `lobby-ecko.jpg`: Ecko, topo de Esquadrões (`SQUADS_ART` em `squads-page.tsx`).
-  - `banner-sunna.jpg`: Sunna, topo de Personagens (`CHARACTERS_ART` em `characters-page.tsx`).
+  - `banner-sunna.jpg`: Sunna, slide Personagens e topo de Personagens (`CHARACTERS_ART` em `characters-page.tsx`).
   - Topo das páginas do hub com arte: `PageBanner` (`src/components/layout/page-banner.tsx`), com `artPosition`
     para ajustar o enquadramento de cada arte.
   - A cabeça dos personagens fica no alto da arte: usar `object-[right_top]` para o rosto não ser cortado.

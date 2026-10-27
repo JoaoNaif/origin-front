@@ -147,6 +147,17 @@
       transform: translateY(0);
     }
   }
+  /* Carrossel do lobby: a barra do slide atual enche; ao terminar, passa para o próximo (pausa junto com a barra) */
+  --animate-slide-progress: slide-progress 7s linear forwards;
+
+  @keyframes slide-progress {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
   /* Faixa "X usa Y" no centro do campo */
   --animate-cast-in: cast-in 1.6s var(--ease-out-soft) forwards;
 
