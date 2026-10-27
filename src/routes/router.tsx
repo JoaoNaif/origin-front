@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/layout/app-shell'
-import { GuestOnly, RequireAuth } from '@/features/auth/auth-guards'
+import { GuestOnly, RequireAdmin, RequireAuth } from '@/features/auth/auth-guards'
 import { AuthLayout } from '@/features/auth/auth-layout'
 import { BattlePage } from '@/pages/battle-page'
 import { CharacterPage } from '@/pages/character-page'
@@ -40,6 +40,16 @@ export const router = createBrowserRouter([
           { path: '/personagens/:id', element: <CharacterPage /> },
           { path: '/esquadroes', element: <SquadsPage /> },
           { path: '/historico', element: <HistoryPage /> },
+          // Admin: carregado só para quem entra nele
+          {
+            element: <RequireAdmin />,
+            children: [
+              {
+                path: '/admin',
+                lazy: async () => ({ Component: (await import('@/pages/admin-page')).AdminPage }),
+              },
+            ],
+          },
         ],
       },
       // Batalha em tela cheia, fora do AppShell

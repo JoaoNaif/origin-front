@@ -8,6 +8,7 @@ import {
   Package,
   PanelLeftClose,
   PanelLeftOpen,
+  ShieldCheck,
   Store,
   Swords,
   Trophy,
@@ -31,6 +32,7 @@ type SidebarProps = {
 
 export function Sidebar({ collapsed, onToggleCollapsed, onNavigate }: SidebarProps) {
   const { data: offers } = useSkillOffers()
+  const { data: account } = useMe()
 
   const groups: { title: string; items: NavItem[] }[] = [
     {
@@ -60,6 +62,11 @@ export function Sidebar({ collapsed, onToggleCollapsed, onNavigate }: SidebarPro
       ],
     },
   ]
+
+  // Só esconde o link: a proteção é o 403 do backend
+  if (account?.role === 'ADMIN') {
+    groups.push({ title: 'Admin', items: [{ to: '/admin', label: 'Admin', icon: ShieldCheck }] })
+  }
 
   let index = 0
 

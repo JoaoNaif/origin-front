@@ -15,6 +15,13 @@ export function RequireAuth() {
   return <Outlet />
 }
 
+/** Só para `role: ADMIN` (dentro do RequireAuth). Só esconde a tela: a proteção de verdade é o 403 do backend. */
+export function RequireAdmin() {
+  const { data: account } = useMe()
+  if (account?.role !== 'ADMIN') return <Navigate to="/" replace />
+  return <Outlet />
+}
+
 /** Login e cadastro: quem já está logado vai para onde queria ir (ou para a home). */
 export function GuestOnly() {
   const location = useLocation()

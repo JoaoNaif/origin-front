@@ -66,11 +66,21 @@ Páginas usam `Page` e `PageHeader` (`src/components/layout/page.tsx`).
 - Backend: `npm run start:dev` no `origin-game` (porta 3333).
 - Front: `npm run dev` (porta 5173, fixa: é a origem liberada por padrão no `CORS_ORIGINS` do backend).
 
-## Admin (para depois, não fazer agora)
+## Admin
 
-Área de admin planejada em `/admin`, no mesmo app: rota com lazy loading e guarda pelo `role` de `GET /me`
-(`ADMIN`). A guarda do front só esconde a tela; a proteção real é o 403 do backend. Visual mais funcional
-(tabelas, formulários), mesma paleta. Depende das rotas de admin no backend (ainda nenhuma).
+`/admin` (`src/pages/admin-page.tsx`, lazy no router), atrás de `RequireAdmin` (`role` de `GET /me`); o link só
+aparece na barra lateral para `ADMIN`. A guarda do front só esconde a tela; a proteção real é o 403 do backend.
+Rotas em `src/features/admin/admin-api.ts`. Duas abas (`?aba=`):
+
+- **Catálogo** (`catalog-panel.tsx`): lista por coleção e um **formulário por tipo** para quem não conhece JSON
+  (`entry-forms.tsx`: variante, traço, campo; `template-form.tsx`, `skill-form.tsx`, `npc-squad-form.tsx`), com
+  listas de escolha, explicação e exemplo em cada campo. O `GET /admin/catalog` já vem no formato do `PUT`; os campos
+  só de leitura ficam fora. Tipos, nomes, explicações e valores de partida dos efeitos/gatilhos em `admin-schema.ts`
+  (espelho de `../origin-game/src/infra/http/schemas/catalog.ts`: **mudou lá, muda aqui**); campos em
+  `form-fields.tsx`, lista de efeitos em `effects-editor.tsx`. Dicas que repetem o servidor só para ajudar
+  (orçamento do modelo, referência da skill via `GET /admin/skills/reference`, faixa de nível do NPC); quem decide é
+  o servidor, e o erro dele aparece no topo com o nome do campo em português. Modo JSON fica como avançado.
+- **Contas** (`accounts-panel.tsx`): tabela das contas, personagens e batalhas da escolhida, dar personagem.
 
 ## API
 
