@@ -321,7 +321,7 @@ export function BattlePage() {
             )}
           </div>
 
-          <div className="relative order-1 flex min-w-0 justify-center overflow-x-auto py-6 lg:order-2 short:pt-1 short:pb-4">
+          <div className="relative order-1 flex min-w-0 justify-center pt-10 pb-2 lg:order-2">
             {playback?.cast && <CastBanner key={playback.cast.id} unit={units.find((u) => u.ref === playback.cast!.ref)} skill={context.skill(playback.cast.skillKey)} />}
             <BattleBoard
               units={units}

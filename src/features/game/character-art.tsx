@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react'
 import { classIcons } from '@/features/game/class-icons'
-import { characterImage, scaleOf } from '@/features/game/character-images'
+import { characterImage } from '@/features/game/character-images'
 import type { CharacterClass } from '@/features/game/game-api'
 import { cn } from '@/lib/cn'
 
@@ -95,7 +95,8 @@ export function PortraitPop({ templateKey }: { templateKey: string }) {
 }
 
 /**
- * Boneco da batalha: a imagem inteira em pé sobre uma sombra no chão, alinhada pelos pés. O inimigo é espelhado para os
+ * Boneco da batalha: a imagem inteira em pé sobre uma sombra no chão, ocupando a caixa com os pés na base (quem posiciona
+ * e escala é o campo, `battle-board.tsx`). O inimigo é espelhado para os
  * dois lados se encararem. Animações (index.css): respirar sempre; avançar ao agir (`attackKey`), tremer e piscar no dano
  * (`hitKey`); a mudança de chave reinicia a animação. Morto fica cinza e apagado.
  */
@@ -118,15 +119,15 @@ export function CharacterSprite({ templateKey, characterClass, side, dead, activ
   const Icon = classIcons[characterClass]
 
   return (
-    <span className="pointer-events-none absolute inset-0 block overflow-hidden rounded-control" aria-hidden>
+    <span className="pointer-events-none absolute inset-0 block" aria-hidden>
       {/* sombra elíptica no chão (a imagem não tem sombra) */}
-      <span className="absolute bottom-[12%] left-1/2 h-3 w-3/4 -translate-x-1/2 rounded-pill bg-[radial-gradient(closest-side,rgb(0_0_0/0.85),transparent)]" />
+      <span className="absolute bottom-0 left-1/2 h-[9%] w-[62%] -translate-x-1/2 translate-y-1/2 rounded-pill bg-[radial-gradient(closest-side,rgb(0_0_0/0.85),transparent)]" />
 
       <span
         key={attackKey ?? 'parado'}
-        // 80% da célula, dos pés (acima da plaquinha) até perto do topo: cabe inteiro, sem invadir os rótulos
-        className={cn('absolute bottom-[14%] left-1/2 block aspect-square -translate-x-1/2', attackKey != null && 'motion-safe:animate-lunge')}
-        style={{ height: `${80 * scaleOf(templateKey)}%`, '--lunge': ally ? '12px' : '-12px' } as CSSProperties}
+        // a caixa toda, pés na base: o campo posiciona e escala (inclusive pelo `characterScale`)
+        className={cn('absolute inset-0 block', attackKey != null && 'motion-safe:animate-lunge')}
+        style={{ '--lunge': ally ? '28px' : '-28px' } as CSSProperties}
       >
         <span
           className={cn(

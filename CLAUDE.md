@@ -48,6 +48,8 @@ Fontes gratuitas (OFL): Barlow Condensed (`font-display`, títulos e botões), I
   `src/features/game/character-images.ts`; componentes em `character-art.tsx`:
   - `CharacterPortrait`: rosto e tronco nos menus (a imagem ampliada a partir do topo; `zoom` maior = só o rosto).
   - `CharacterSprite`: boneco inteiro da batalha, sobre sombra em CSS; o **inimigo é espelhado no CSS** (`scaleX(-1)`).
+    Fica solto no campo, sem card: `battle-board.tsx` desenha o chão em perspectiva (SVG, casas = alvo do clique e do
+    teclado) e posiciona cada boneco pelos pés no meio da casa, com a barra de vida acima da cabeça.
     Animações no `index.css` (respirar, avançar, dano, morto em cinza), disparadas pelos eventos do servidor.
   - Sem a imagem (ainda não gerada), os dois caem no ícone da classe: um arquivo novo aparece sem mexer no código.
 - Estados: `*-hover` clareia, `*-active` escurece, desabilitado = `opacity-40`, foco = utilitário `focus-ring`.
