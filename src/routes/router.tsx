@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/layout/app-shell'
 import { GuestOnly, RequireAdmin, RequireAuth } from '@/features/auth/auth-guards'
 import { AuthLayout } from '@/features/auth/auth-layout'
+import { AccountPage } from '@/pages/account-page'
 import { BattlePage } from '@/pages/battle-page'
 import { CharacterPage } from '@/pages/character-page'
 import { CharactersPage } from '@/pages/characters-page'
@@ -40,6 +41,7 @@ export const router = createBrowserRouter([
           { path: '/personagens/:id', element: <CharacterPage /> },
           { path: '/esquadroes', element: <SquadsPage /> },
           { path: '/historico', element: <HistoryPage /> },
+          { path: '/conta', element: <AccountPage /> },
           // Admin: carregado só para quem entra nele
           {
             element: <RequireAdmin />,

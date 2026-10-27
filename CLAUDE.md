@@ -64,6 +64,8 @@ Barra **lateral** (`src/components/layout/sidebar.tsx`), recolhível no desktop 
 `AppShell`. Escolhida por ser desktop primeiro e ter muitas seções (hoje e no futuro: mercado, ranqueado, baús,
 organização, admin), sem roubar altura da grade. A tela de batalha fica **fora** do `AppShell`, em tela cheia.
 Páginas usam `Page` e `PageHeader` (`src/components/layout/page.tsx`).
+O cartão da conta no pé da barra leva a `/conta` (`account-page.tsx`): números da conta, nome exibido e senha
+(`PATCH /me`, `useUpdateAccount`) e sair. Senha atual errada vem como 400, marcada no campo.
 
 ## Rodando
 

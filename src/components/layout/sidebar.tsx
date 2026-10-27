@@ -1,4 +1,3 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   History,
   House,
@@ -15,9 +14,9 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react'
-import { NavLink } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { Logo, LogoMark } from '@/components/brand/logo'
-import { logout, meQueryKey, useMe } from '@/features/auth/auth-api'
+import { accountInitials, useLogout, useMe } from '@/features/auth/auth-api'
 import { useSkillOffers } from '@/features/game/game-api'
 import { cn } from '@/lib/cn'
 
@@ -111,7 +110,7 @@ export function Sidebar({ collapsed, onToggleCollapsed, onNavigate }: SidebarPro
         </div>
       )}
 
-      <AccountCard collapsed={collapsed} />
+      <AccountCard collapsed={collapsed} onNavigate={onNavigate} />
     </div>
   )
 }
@@ -208,24 +207,10 @@ function CollapseButton({ collapsed, onClick }: { collapsed: boolean; onClick: (
   )
 }
 
-function AccountCard({ collapsed }: { collapsed: boolean }) {
+function AccountCard({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { data: account } = useMe()
-  const queryClient = useQueryClient()
-
-  // Sem conta no /me, o RequireAuth leva para o login
-  const logoutMutation = useMutation({
-    mutationFn: logout,
-    onSettled: () => {
-      queryClient.clear()
-      queryClient.setQueryData(meQueryKey, null)
-    },
-  })
-
-  const initials = (account?.displayName ?? '?')
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('')
+  const logoutMutation = useLogout()
+  const initials = accountInitials(account?.displayName)
 
   return (
     <div className="relative border-t border-line p-3">
@@ -236,15 +221,25 @@ function AccountCard({ collapsed }: { collapsed: boolean }) {
         </p>
       )}
       <div className={cn('flex items-center gap-3', collapsed ? 'flex-col' : 'px-2 py-1')}>
-        <span className="chamfer flex size-9 shrink-0 items-center justify-center font-display text-sm font-bold text-primary-soft [--chamfer-bg:var(--color-primary-dim)] [--chamfer-border:rgb(139_92_246/0.5)] [--cut:7px]">
-          {initials}
-        </span>
-        {!collapsed && (
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-display text-base font-semibold uppercase tracking-wide text-fg">{account?.displayName}</p>
-            <p className="truncate font-mono text-[11px] text-fg-subtle">@{account?.username}</p>
-          </div>
-        )}
+        <Link
+          to="/conta"
+          onClick={onNavigate}
+          aria-label="Minha conta"
+          title="Minha conta"
+          className="focus-ring group -m-1 flex min-w-0 flex-1 items-center gap-3 rounded-control p-1 transition-colors hover:bg-white/5"
+        >
+          <span className="chamfer flex size-9 shrink-0 items-center justify-center font-display text-sm font-bold text-primary-soft [--chamfer-bg:var(--color-primary-dim)] [--chamfer-border:rgb(139_92_246/0.5)] [--cut:7px]">
+            {initials}
+          </span>
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-display text-base font-semibold uppercase tracking-wide text-fg group-hover:text-silver-bright">
+                {account?.displayName}
+              </p>
+              <p className="truncate font-mono text-[11px] text-fg-subtle">@{account?.username}</p>
+            </div>
+          )}
+        </Link>
         <button
           type="button"
           onClick={() => logoutMutation.mutate()}

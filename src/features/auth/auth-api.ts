@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, apiErrorMessage, httpStatus } from '@/lib/api'
 
 // Contas e sessão (../origin-game/docs/api.md, "Contas e sessão").
@@ -42,6 +42,41 @@ export async function getMe(): Promise<Account | null> {
 
 export function useMe() {
   return useQuery({ queryKey: meQueryKey, queryFn: getMe })
+}
+
+/** Até duas iniciais do nome exibido (avatar). */
+export function accountInitials(displayName = '?') {
+  return displayName
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
+}
+
+/** Sai e limpa o cache; sem conta no /me, o RequireAuth leva para o login. */
+export function useLogout() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: logout,
+    onSettled: () => {
+      queryClient.clear()
+      queryClient.setQueryData(meQueryKey, null)
+    },
+  })
+}
+
+export type UpdateAccountInput = { displayName?: string; currentPassword?: string; newPassword?: string }
+
+/**
+ * Muda o nome exibido e/ou a senha (PATCH /me). Trocar a senha encerra as outras sessões e manda cookies novos para
+ * este aparelho. Senha atual errada vem como 400 (não 401), então não dispara o refresh.
+ */
+export function useUpdateAccount() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: UpdateAccountInput) => (await api.patch<{ account: Account }>('/me', input)).data.account,
+    onSuccess: (account) => queryClient.setQueryData(meQueryKey, account),
+  })
 }
 
 /** Mensagem dos erros comuns de login e cadastro. */
