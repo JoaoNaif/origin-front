@@ -150,9 +150,10 @@ export function BattlePage() {
     })
   }
 
-  function execute() {
-    if (!chosen || submit.isPending) return
-    submit.mutate(chosen.payload, {
+  function execute(option: TurnOption) {
+    if (submit.isPending) return
+    select({ chosen: option })
+    submit.mutate(option.payload, {
       onSuccess: play,
       onError: (e) => {
         if (httpStatus(e) === 409) {
@@ -233,17 +234,12 @@ export function BattlePage() {
   const characters = useCharacters()
   const baseStats = useMemo(() => new Map(characters.data?.map((c) => [c.id, c.stats])), [characters.data])
 
-  // Teclado: 1 a 4 escolhem a skill, Enter executa, Esc cancela. useEffectEvent: lê sempre a escolha mais recente
-  // (um Enter logo depois do clique não pode pegar o estado de antes)
+  // Teclado: 1 a 4 escolhem a skill, Esc cancela. useEffectEvent: lê sempre a vez mais recente
   const onKey = useEffectEvent((e: KeyboardEvent) => {
-    if (!playerTurn || !actor || e.target instanceof HTMLInputElement) return
+    if (!playerTurn || !actor || submit.isPending || e.target instanceof HTMLInputElement) return
     const skill = actor.skills[Number(e.key) - 1]
     if (skill?.ready) select({ mode: { kind: 'SKILL', skillKey: skill.key }, chosen: null })
     else if (e.key === 'Escape') select({ mode: null, chosen: null })
-    else if (e.key === 'Enter' && chosen) {
-      e.preventDefault() // o Enter não "clica" de novo no botão em foco
-      execute()
-    }
   })
   useEffect(() => {
     window.addEventListener('keydown', onKey)
@@ -307,8 +303,8 @@ export function BattlePage() {
                 unitName={context.name}
                 cellLabel={cellLabel}
                 fieldName={(key) => context.field(key)}
-                onChoose={(option) => select({ chosen: option })}
-                onExecute={execute}
+                onChoose={execute}
+                onPreview={(option) => select({ chosen: option })}
                 onCancel={() => select({ mode: null, chosen: null })}
               />
             ) : (
@@ -336,8 +332,10 @@ export function BattlePage() {
               // o painel da unidade cobriria a animação
               inspect={!playback}
               onCellClick={(side, cell) => {
+                // um alvo só: já envia; com escolhas extras (trocar com, mover para, campo), o painel pergunta
                 const group = groups.get(cellId(side, cell))
-                if (group) select({ chosen: group[0] })
+                if (group?.length === 1) execute(group[0])
+                else if (group) select({ chosen: group[0] })
               }}
               onCellHover={(side, cell) => setHoverCell(cell ? cellId(side, cell) : null)}
               unitName={context.name}
@@ -371,7 +369,7 @@ export function BattlePage() {
             chosen={chosen}
             busy={submit.isPending}
             onMode={(next) => select({ mode: next, chosen: null })}
-            onChoose={(option) => select({ chosen: option })}
+            onChoose={execute}
             onHoverSkill={setHoveredSkill}
           />
         ) : finished ? (

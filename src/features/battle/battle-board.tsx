@@ -221,7 +221,7 @@ export function BattleBoard({ units, ghosts, activeRef, marks, floats, impacted,
               onClick={clickable ? () => onCellClick(side, cell) : undefined}
               onKeyDown={(e) => {
                 if (!clickable || (e.key !== 'Enter' && e.key !== ' ')) return
-                // o Enter da página executaria a escolha anterior
+                // a tecla é do clique na casa, não dos atalhos da página
                 e.preventDefault()
                 e.stopPropagation()
                 onCellClick(side, cell)

@@ -120,10 +120,10 @@ export function ActionBar({ actor, options, loading, mode, chosen, busy, onMode,
 }
 
 /**
- * Painel à esquerda da grade: a skill por extenso (a do mouse, ou a escolhida), a prévia do alvo, as escolhas extras e
- * o Executar.
+ * Painel à esquerda da grade: a skill por extenso (a do mouse, ou a escolhida), a prévia do alvo e as escolhas extras.
+ * Não há "Executar": o clique no alvo (ou na escolha extra) já envia a jogada.
  */
-export function ActionDetail({ actor, mode, chosen, focused, group, busy, error, hoveredSkill, unitName, cellLabel, fieldName, onChoose, onExecute, onCancel }: {
+export function ActionDetail({ actor, mode, chosen, focused, group, busy, error, hoveredSkill, unitName, cellLabel, fieldName, onChoose, onPreview, onCancel }: {
   actor: BattleUnit
   mode: Mode
   chosen: TurnOption | null
@@ -137,8 +137,10 @@ export function ActionDetail({ actor, mode, chosen, focused, group, busy, error,
   unitName: (ref: string) => string
   cellLabel: (cell: Cell) => string
   fieldName: (key: string) => string
+  /** Envia a jogada. */
   onChoose: (option: TurnOption) => void
-  onExecute: () => void
+  /** Mouse numa escolha extra: a prévia mostra ela. */
+  onPreview: (option: TurnOption) => void
   onCancel: () => void
 }) {
   const selectedKey = mode?.kind === 'SKILL' ? mode.skillKey : null
@@ -184,6 +186,8 @@ export function ActionDetail({ actor, mode, chosen, focused, group, busy, error,
                   key={i}
                   type="button"
                   onClick={() => onChoose(option)}
+                  onMouseEnter={() => !busy && onPreview(option)}
+                  disabled={busy}
                   aria-pressed={option === chosen}
                   className={cn(
                     'focus-ring rounded-control border px-2 py-1 text-xs transition-colors',
@@ -199,16 +203,19 @@ export function ActionDetail({ actor, mode, chosen, focused, group, busy, error,
         {error && <p className="text-xs text-danger">{error}</p>}
       </div>
 
-      <div className="mt-3 flex items-center justify-end gap-2">
-        {(mode || chosen) && (
-          <Button variant="ghost" size="sm" onClick={onCancel} disabled={busy}>
-            <X className="size-3.5" /> Esc
-          </Button>
-        )}
-        <Button size="sm" onClick={onExecute} disabled={!chosen || busy}>
-          {busy ? 'Enviando...' : 'Executar'}
-        </Button>
-      </div>
+      {(busy || mode || chosen) && (
+        <div className="mt-3 flex items-center justify-end gap-2">
+          {busy ? (
+            <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-primary-soft">
+              <Loader2 className="size-3.5 animate-spin" /> Enviando
+            </span>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={onCancel}>
+              <X className="size-3.5" /> Esc
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
