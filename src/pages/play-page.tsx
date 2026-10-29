@@ -5,6 +5,7 @@ import { Page, PageHeader, SectionTitle } from '@/components/layout/page'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { buttonClasses } from '@/components/ui/button-classes'
+import { Dialog } from '@/components/ui/dialog'
 import { useCreateDraft, useNpcSquads, useStartBattle, type BattleDraft, type NpcSquad } from '@/features/battle/battle-api'
 import { classIcons } from '@/features/game/class-icons'
 import {
@@ -43,6 +44,12 @@ export function PlayPage() {
   function chooseOpponent(npc: NpcSquad) {
     start.reset()
     createDraft.mutate(npc.key)
+  }
+
+  function closeDraft() {
+    if (start.isPending) return
+    createDraft.reset()
+    start.reset()
   }
 
   function begin() {
@@ -138,23 +145,37 @@ export function PlayPage() {
         )}
       </section>
 
-      {/* 02 Campo + 03 Esquadrão: depois do sorteio */}
-      {createDraft.isPending && <div className="h-40 animate-pulse bg-raised" />}
-      {draft && !createDraft.isPending && (
-        <>
-          <FieldSection draft={draft} />
-          <SquadSection draft={draft} squadId={squadId} onSelect={setSquadId} />
-
-          <div className="flex flex-wrap items-center justify-end gap-3 border-t border-line pt-5">
-            {startError && <p className="mr-auto text-sm text-danger">{startError}</p>}
-            <p className="font-mono text-[11px] text-fg-subtle">A pré-batalha vale 30 minutos.</p>
-            <Button size="lg" onClick={begin} disabled={!squadId || start.isPending}>
-              <Swords className="size-5" />
-              {start.isPending ? 'Entrando...' : `Enfrentar ${draft.opponent.name}`}
-            </Button>
+      {/* Campo + Esquadrão: modal depois do sorteio */}
+      <Dialog
+        open={createDraft.isPending || !!draft}
+        onClose={closeDraft}
+        eyebrow={draft ? `${difficultyLabels[draft.opponent.difficulty]} · ${profileLabels[draft.opponent.profile]}` : 'Sorteando o campo...'}
+        title={draft ? `vs ${draft.opponent.name}` : 'Pré-batalha'}
+        footer={
+          draft && (
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              {startError && <p className="mr-auto text-sm text-danger">{startError}</p>}
+              <p className="font-mono text-[11px] text-fg-subtle">A pré-batalha vale 30 minutos.</p>
+              <Button size="lg" onClick={begin} disabled={!squadId || start.isPending}>
+                <Swords className="size-5" />
+                {start.isPending ? 'Entrando...' : `Enfrentar ${draft.opponent.name}`}
+              </Button>
+            </div>
+          )
+        }
+      >
+        {draft && !createDraft.isPending ? (
+          <>
+            <FieldSection draft={draft} />
+            <SquadSection draft={draft} squadId={squadId} onSelect={setSquadId} />
+          </>
+        ) : (
+          <div className="space-y-4">
+            <div className="h-24 animate-pulse bg-raised" />
+            <div className="h-40 animate-pulse bg-raised" />
           </div>
-        </>
-      )}
+        )}
+      </Dialog>
     </Page>
   )
 }
@@ -166,7 +187,7 @@ function FieldSection({ draft }: { draft: BattleDraft }) {
 
   return (
     <section className="space-y-5">
-      <SectionTitle index="02">Campo sorteado</SectionTitle>
+      <SectionTitle index="01">Campo sorteado</SectionTitle>
       <div className="hud-corners flex flex-wrap items-center gap-6 border border-line/60 bg-surface/60 p-5 [--hud-color:var(--color-warning)]">
         <span className="flex size-12 items-center justify-center border border-warning/40 text-warning">
           <Mountain className="size-6" />
@@ -209,7 +230,7 @@ function SquadSection({ draft, squadId, onSelect }: { draft: BattleDraft; squadI
 
   return (
     <section className="space-y-5">
-      <SectionTitle index="03">Esquadrão</SectionTitle>
+      <SectionTitle index="02">Esquadrão</SectionTitle>
       {squads.isPending || characters.isPending ? (
         <div className="h-40 animate-pulse bg-raised" />
       ) : !squads.data?.length ? (
@@ -221,7 +242,7 @@ function SquadSection({ draft, squadId, onSelect }: { draft: BattleDraft; squadI
           </Link>
         </div>
       ) : (
-        <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid gap-3 md:grid-cols-2">
           {squads.data.map((squad) => (
             <li key={squad.id}>
               <SquadOption squad={squad} byId={byId} required={required} active={squad.id === squadId} onSelect={() => onSelect(squad.id)} />
