@@ -83,32 +83,35 @@ export function EffectsEditor({ effects, onChange, specs, addLabel = 'Adicionar 
       {effects.map((effect, index) => {
         const spec = specs[effect.type]
         return (
-          <div key={index} className="space-y-3 rounded-card border border-line bg-raised/60 p-4">
-            <div className="flex items-start gap-3">
-              <span className="mt-2.5 font-mono text-[11px] text-primary-soft">{String(index + 1).padStart(2, '0')}</span>
-              <div className="flex-1">
-                <SelectField
-                  label="Tipo"
-                  value={effect.type}
-                  onChange={(type) => type && replace(index, newEffect(type, specs[type]))}
-                  options={types.map((t) => ({ value: t, label: specs[t].label, hint: specs[t].description }))}
-                />
-              </div>
+          <div key={index} className="rounded-card border border-line bg-raised/60">
+            {/* cabeçalho: número e tirar; embaixo, o tipo e os campos na mesma coluna */}
+            <div className="flex items-center justify-between border-b border-line py-1.5 pr-1.5 pl-4">
+              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">
+                Efeito <span className="text-primary-soft">{String(index + 1).padStart(2, '0')}</span>
+              </span>
               <Button
                 size="sm"
                 variant="ghost"
-                className="mt-6 text-fg-subtle hover:text-danger-hover"
+                className="text-fg-subtle hover:text-danger-hover"
                 aria-label="Tirar efeito"
                 onClick={() => onChange(effects.filter((_, i) => i !== index))}
               >
                 <Trash2 className="size-4" />
               </Button>
             </div>
-            {spec ? (
-              <EffectFields effect={effect} spec={spec} onChange={(e) => replace(index, e)} />
-            ) : (
-              <p className="text-xs text-warning">Tipo desconhecido: {effect.type}</p>
-            )}
+            <div className="space-y-4 p-4">
+              <SelectField
+                label="Tipo"
+                value={effect.type}
+                onChange={(type) => type && replace(index, newEffect(type, specs[type]))}
+                options={types.map((t) => ({ value: t, label: specs[t].label, hint: specs[t].description }))}
+              />
+              {spec ? (
+                <EffectFields effect={effect} spec={spec} onChange={(e) => replace(index, e)} />
+              ) : (
+                <p className="text-xs text-warning">Tipo desconhecido: {effect.type}</p>
+              )}
+            </div>
           </div>
         )
       })}
@@ -121,7 +124,7 @@ export function EffectsEditor({ effects, onChange, specs, addLabel = 'Adicionar 
           className="h-8 rounded-control border border-line bg-bg px-2 text-sm text-fg"
         >
           {types.map((t) => (
-            <option key={t} value={t}>
+            <option key={t} value={t} className="bg-bg text-fg">
               {specs[t].label}
             </option>
           ))}

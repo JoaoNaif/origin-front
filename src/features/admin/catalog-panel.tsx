@@ -1,11 +1,12 @@
-import { useMemo, useState, type ComponentType } from 'react'
+import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import { Braces, Copy, FileText, Loader2, Plus, Save, Search, Trash2, Undo2, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { toast } from '@/components/ui/toast'
 import {
   adminErrorMessage,
   catalogKeys,
-  readOnlyFields,
+  editableBody,
   useAdminCatalog,
   useAdminOptions,
   useDeleteCatalogEntry,
@@ -14,7 +15,7 @@ import {
   type CatalogCollection,
   type CatalogItem,
 } from '@/features/admin/admin-api'
-import { collectionInfo, emptyBodies, KEY_PATTERN, slugify, type AdminRules, type FormProps } from '@/features/admin/admin-schema'
+import { collectionInfo, emptyBodies, ending, KEY_PATTERN, slugify, type AdminRules, type FormProps } from '@/features/admin/admin-schema'
 import { FieldForm, TraitForm, VariantForm } from '@/features/admin/entry-forms'
 import { Field, Note } from '@/features/admin/form-fields'
 import { NpcSquadForm } from '@/features/admin/npc-squad-form'
@@ -34,11 +35,6 @@ const forms = {
   'npc-squads': NpcSquadForm,
 } as unknown as Record<CatalogCollection, ComponentType<FormProps<Record<string, unknown>>>>
 
-/** Corpo da edição: o item sem a `key` (vai na URL) e sem os campos só de leitura. */
-function editableBody(collection: CatalogCollection, item: CatalogItem) {
-  const hidden = new Set(['key', ...(readOnlyFields[collection] ?? [])])
-  return structuredClone(Object.fromEntries(Object.entries(item).filter(([field]) => !hidden.has(field))))
-}
 
 /** Erro de kit do modelo (D92, D97): diz o que fazer, não só o que falta. */
 function withKitHelp(message: string, key: string) {
@@ -56,6 +52,12 @@ export function CatalogPanel() {
   const [collection, setCollection] = useState<CatalogCollection>('templates')
   const [query, setQuery] = useState('')
   const [selection, setSelection] = useState<Selection | null>(null)
+  // remonta o editor depois de salvar (o catálogo já veio novo); criar algo de dentro do formulário não remonta
+  const [saves, setSaves] = useState(0)
+  const saved = (key: string) => {
+    setSelection({ key, isNew: false })
+    setSaves((n) => n + 1)
+  }
 
   const items = useMemo(() => catalog.data?.[catalogKeys[collection]] ?? [], [catalog.data, collection])
   const q = query.trim().toLowerCase()
@@ -104,7 +106,7 @@ export function CatalogPanel() {
         <aside className="hud-corners flex max-h-[44rem] flex-col border border-line bg-surface [--hud-color:var(--color-line-strong)] lg:sticky lg:top-6">
           <div className="space-y-2 border-b border-line p-2">
             <Button size="sm" className="w-full" onClick={() => startNew(null)}>
-              <Plus className="size-4" /> Nova {info.singular}
+              <Plus className="size-4" /> Nov{ending(collection)} {info.singular}
             </Button>
             <label className="flex h-9 items-center gap-2 rounded-control border border-line bg-bg px-2.5 focus-within:border-primary">
               <Search className="size-3.5 text-fg-subtle" />
@@ -148,18 +150,18 @@ export function CatalogPanel() {
             isNew
             catalog={catalog.data}
             rules={rules}
-            onSaved={(key) => setSelection({ key, isNew: false })}
+            onSaved={saved}
             onCancel={() => setSelection(null)}
           />
         ) : selected ? (
           <EntryEditor
-            key={`${collection}-${selected.key}-${catalog.data.version}`}
+            key={`${collection}-${selected.key}-${saves}`}
             collection={collection}
             item={selected}
             isNew={false}
             catalog={catalog.data}
             rules={rules}
-            onSaved={(key) => setSelection({ key, isNew: false })}
+            onSaved={saved}
             onDeleted={() => setSelection(null)}
             onDuplicate={() => startNew(selected)}
           />
@@ -168,7 +170,7 @@ export function CatalogPanel() {
             <p className="text-sm text-fg-muted">Escolha um item da lista para editar, ou crie um novo.</p>
             <p className="font-mono text-xs text-fg-subtle">{info.example}</p>
             <Button size="sm" variant="secondary" onClick={() => startNew(null)}>
-              <Plus className="size-4" /> Nova {info.singular}
+              <Plus className="size-4" /> Nov{ending(collection)} {info.singular}
             </Button>
           </div>
         )}
@@ -240,13 +242,38 @@ function EntryEditor({ collection, item, isNew, catalog, rules, onSaved, onDelet
     }
   }
 
+  const errorRef = useRef<HTMLDivElement>(null)
+  const [errorSeq, setErrorSeq] = useState(0)
+  // a mensagem fica no topo do formulário: leva a tela até ela (quem salvou estava lá embaixo, na revisão)
+  useEffect(() => {
+    if (errorSeq) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [errorSeq])
+  const fail = (message: string) => {
+    setLocalError(message)
+    setErrorSeq((n) => n + 1)
+    toast.error('Não foi possível salvar', 'O motivo está no topo do formulário.')
+  }
+
   const submit = () => {
     const payload = currentBody()
-    if (!payload) return
-    if (!String(payload.name ?? '').trim()) return setLocalError('Dê um nome.')
-    if (isNew && (!key || keyError)) return setLocalError(keyError ?? 'Preencha a key.')
+    if (!payload) return setErrorSeq((n) => n + 1)
+    if (!String(payload.name ?? '').trim()) return fail('Dê um nome.')
+    if (isNew && (!key || keyError)) return fail(keyError ?? 'Preencha a key.')
     setLocalError(null)
-    save.mutate({ key, body: payload, isNew }, { onSuccess: () => onSaved(key) })
+    const name = String(payload.name)
+    save.mutate(
+      { key, body: payload, isNew },
+      {
+        onSuccess: () => {
+          toast.success(`${info.singular[0].toUpperCase()}${info.singular.slice(1)} ${isNew ? 'criad' : 'salv'}${ending(collection)}`, `${name} · ${key}`)
+          onSaved(key)
+        },
+        onError: () => {
+          setErrorSeq((n) => n + 1)
+          toast.error('Não foi possível salvar', 'O servidor recusou. O motivo está no topo do formulário.')
+        },
+      },
+    )
   }
 
   const serverError = save.isError
@@ -267,7 +294,7 @@ function EntryEditor({ collection, item, isNew, catalog, rules, onSaved, onDelet
       <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface/95 px-5 py-4 backdrop-blur">
         <div className="min-w-0">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary-soft">
-            {isNew ? (item ? `Nova ${info.singular} · cópia de ${item.name}` : `Nova ${info.singular}`) : info.singular}
+            {isNew ? (item ? `Nov${ending(collection)} ${info.singular} · cópia de ${item.name}` : `Nov${ending(collection)} ${info.singular}`) : info.singular}
           </p>
           <h2 className="truncate font-display text-3xl font-bold uppercase italic text-silver-bright">
             {String(body.name ?? '') || <span className="text-fg-subtle">Sem nome</span>}
@@ -315,18 +342,30 @@ function EntryEditor({ collection, item, isNew, catalog, rules, onSaved, onDelet
 
       <div className="space-y-6 p-5">
         {(localError || serverError) && (
-          <div role="alert" className="space-y-1 rounded-control border border-danger/30 bg-danger-dim px-3 py-2.5">
+          <div ref={errorRef} role="alert" className="scroll-mt-28 space-y-1 rounded-control border border-danger/30 bg-danger-dim px-3 py-2.5">
             <p className="font-display text-sm font-semibold uppercase tracking-wide text-danger-hover">Não foi possível salvar</p>
             <pre className="whitespace-pre-wrap font-sans text-xs text-fg">{localError ?? serverError}</pre>
           </div>
         )}
 
-        {isNew && (
-          <KeyField collection={collection} value={key} onChange={setKey} error={keyError} catalog={catalog} name={String(body.name ?? '')} />
+        {/* os assistentes do modelo e da skill pedem a key no passo 1 */}
+        {isNew && collection !== 'templates' && collection !== 'skills' && (
+          <KeyField collection={collection} value={key} onChange={setKey} error={keyError} name={String(body.name ?? '')} />
         )}
 
         {mode === 'form' ? (
-          <Form value={body} onChange={changeBody} catalog={catalog} rules={rules} itemKey={key} />
+          <Form
+            value={body}
+            onChange={changeBody}
+            catalog={catalog}
+            rules={rules}
+            itemKey={key}
+            isNew={isNew}
+            onKeyChange={setKey}
+            keyError={keyError}
+            onSubmit={submit}
+            saving={save.isPending}
+          />
         ) : (
           <Field label="Corpo (JSON)" hint="Modo avançado: o mesmo corpo do formulário. Volte ao formulário para conferir.">
             <textarea
@@ -356,7 +395,19 @@ function EntryEditor({ collection, item, isNew, catalog, rules, onSaved, onDelet
                   size="sm"
                   variant="danger"
                   disabled={remove.isPending}
-                  onClick={() => remove.mutate(item.key, { onSuccess: onDeleted, onSettled: () => setConfirmDelete(false) })}
+                  onClick={() =>
+                    remove.mutate(item.key, {
+                      onSuccess: () => {
+                        toast.success(`${info.singular[0].toUpperCase()}${info.singular.slice(1)} apagad${ending(collection)}`, item.name)
+                        onDeleted?.()
+                      },
+                      onError: () => {
+                        setErrorSeq((n) => n + 1)
+                        toast.error('Não foi possível apagar', 'O motivo está no topo do formulário.')
+                      },
+                      onSettled: () => setConfirmDelete(false),
+                    })
+                  }
                 >
                   {remove.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
                   Apagar
@@ -374,73 +425,24 @@ function EntryEditor({ collection, item, isNew, catalog, rules, onSaved, onDelet
   )
 }
 
-/** A `key` (identificador fixo) de um item novo. Nas skills: o modelo dono + um nome curto. */
-function KeyField({ collection, value, onChange, error, catalog, name }: {
+/** A `key` (identificador fixo) de um item novo (modelo e skill pedem a key no próprio passo a passo). */
+function KeyField({ collection, value, onChange, error, name }: {
   collection: CatalogCollection
   value: string
   onChange: (key: string) => void
   error?: string
-  catalog: AdminCatalog
   name: string
 }) {
-  const [owner, slug] = value.includes(':') ? value.split(':', 2) : ['', value]
   const hint = (
     <>
       Identificador fixo, não muda depois. Só minúsculas, números e “-”.{' '}
       {name && !value && (
-        <button type="button" className="text-primary-soft underline-offset-2 hover:underline" onClick={() => onChange(collection === 'skills' && owner ? `${owner}:${slugify(name)}` : slugify(name))}>
+        <button type="button" className="text-primary-soft underline-offset-2 hover:underline" onClick={() => onChange(slugify(name))}>
           Usar “{slugify(name)}”
         </button>
       )}
     </>
   )
-
-  if (collection === 'skills') {
-    return (
-      <div className="grid gap-4 rounded-card border border-line bg-raised/40 p-4 sm:grid-cols-2">
-        <Field
-          label="Modelo dono"
-          hint={
-            owner && !catalog.templates.some((t) => t.key === owner)
-              ? `“${owner}” ainda não existe: crie as 4 skills do kit e depois o modelo com essa key.`
-              : 'O personagem que usa a skill. Escolha um ou digite a key de um modelo novo.'
-          }
-        >
-          <input
-            list="admin-template-keys"
-            value={owner}
-            onChange={(e) => {
-              const next = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
-              onChange(next ? `${next}:${slug || slugify(name)}` : slug)
-            }}
-            placeholder="ex.: draxler"
-            className="h-10 w-full rounded-control border border-line bg-bg px-3 font-mono text-sm text-fg outline-none placeholder:text-fg-subtle focus:border-primary"
-          />
-          <datalist id="admin-template-keys">
-            {catalog.templates.map((t) => (
-              <option key={t.key} value={t.key}>
-                {t.name}
-              </option>
-            ))}
-          </datalist>
-        </Field>
-        <Field label="Nome curto" hint={hint} error={error}>
-          <div className="flex h-10 items-center rounded-control border border-line bg-bg focus-within:border-primary">
-            {owner && <span className="pl-3 font-mono text-sm text-fg-subtle">{owner}:</span>}
-            <input
-              value={slug}
-              onChange={(e) => onChange(owner ? `${owner}:${e.target.value}` : e.target.value)}
-              placeholder="ex.: detonacao"
-              className="h-full w-full min-w-0 bg-transparent px-1.5 font-mono text-sm text-fg outline-none placeholder:text-fg-subtle"
-            />
-          </div>
-        </Field>
-        <p className="font-mono text-xs text-fg-subtle sm:col-span-2">
-          key final: <span className="text-fg">{value || '—'}</span>
-        </p>
-      </div>
-    )
-  }
 
   return (
     <div className="rounded-card border border-line bg-raised/40 p-4">

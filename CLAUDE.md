@@ -80,7 +80,13 @@ Rotas em `src/features/admin/admin-api.ts`. Duas abas (`?aba=`):
 
 - **Catálogo** (`catalog-panel.tsx`): lista por coleção e um **formulário por tipo** para quem não conhece JSON
   (`entry-forms.tsx`: variante, traço, campo; `template-form.tsx`, `skill-form.tsx`, `npc-squad-form.tsx`), com
-  listas de escolha, explicação e exemplo em cada campo. O `GET /admin/catalog` já vem no formato do `PUT`; os campos
+  listas de escolha, explicação e exemplo em cada campo, e `*` nos obrigatórios. **Todo formulário é um passo a
+  passo**, pensado para quem não conhece o projeto: cada passo explica o que é, mostra o que falta (espelho das regras
+  do domínio no backend, só para orientar) e termina numa revisão. Peças em `wizard.tsx` (trilha, cabeçalho, navegação,
+  revisão) e `wizard-steps.ts`; escolhas explicadas em cartões (`ChoiceCards`). Item novo começa do passo 1; existente
+  abre na revisão. No modelo (`template-form.tsx`), variante, traço e skills do kit são escolhidos ou criados ali mesmo
+  (`inline-entry.tsx`, salva na hora), porque o servidor só aceita o modelo com as 4 skills do kit já criadas. A skill
+  (`skill-form.tsx`) tem desenho da grade para área e alcance e a frase que o jogador vai ler. O `GET /admin/catalog` já vem no formato do `PUT`; os campos
   só de leitura ficam fora. Tipos, nomes, explicações e valores de partida dos efeitos/gatilhos em `admin-schema.ts`
   (espelho de `../origin-game/src/infra/http/schemas/catalog.ts`: **mudou lá, muda aqui**); campos em
   `form-fields.tsx`, lista de efeitos em `effects-editor.tsx`. Dicas que repetem o servidor só para ajudar

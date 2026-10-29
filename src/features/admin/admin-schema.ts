@@ -424,10 +424,11 @@ export function slugify(text: string) {
 export const KEY_PATTERN = /^[a-z0-9]+(?:[-:][a-z0-9]+)*$/
 
 /** Nome, exemplo e explicação de cada coleção (cabeçalho do formulário). */
-export const collectionInfo: Record<CatalogCollection, { label: string; singular: string; example: string; help: string }> = {
+export const collectionInfo: Record<CatalogCollection, { label: string; singular: string; feminine?: boolean; example: string; help: string }> = {
   variants: {
     label: 'Variantes',
     singular: 'variante',
+    feminine: true,
     example: 'Ex.: Relâmpago, linhagem Elemental',
     help: 'O poder de um personagem (Explosão, Gelo, Tempo...). Cada variante pertence a uma linhagem; uma variante despertada nasce de outra.',
   },
@@ -446,6 +447,7 @@ export const collectionInfo: Record<CatalogCollection, { label: string; singular
   skills: {
     label: 'Skills',
     singular: 'skill',
+    feminine: true,
     example: 'Ex.: kael-vaz:detonacao, Padrão, corpo a corpo',
     help: 'Golpes e habilidades. A key começa com o modelo dono ("kael-vaz:..."). As 4 do kit têm classe e papel no kit; as outras caem nos blocos de skill.',
   },
@@ -481,9 +483,18 @@ export type FormProps<T> = {
   rules: AdminRules | undefined
   /** `key` do item (vazia num novo). */
   itemKey: string
+  // Só o assistente do modelo usa: ele pede a key no passo 1 e tem o botão de salvar no fim
+  isNew?: boolean
+  onKeyChange?: (key: string) => void
+  keyError?: string
+  onSubmit?: () => void
+  saving?: boolean
 }
 
 /** Itens do catálogo como opções: nome e key. */
 export function keyOptions(items: CatalogItem[], hint?: (item: CatalogItem) => string | undefined): Option[] {
   return items.map((item) => ({ value: item.key, label: `${item.name} · ${item.key}`, hint: hint?.(item) }))
 }
+
+/** "a" ou "o" conforme o gênero do tipo ("Nova variante", "Novo modelo", "criada", "criado"). */
+export const ending = (collection: CatalogCollection) => (collectionInfo[collection].feminine ? 'a' : 'o')

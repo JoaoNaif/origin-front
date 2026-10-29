@@ -39,7 +39,13 @@ export const readOnlyFields: Partial<Record<CatalogCollection, string[]>> = {
   'npc-squads': ['level'],
 }
 
-export type AdminAccount = Account & { characters: number; battles: number }
+/** Corpo da edição: o item sem a `key` (vai na URL) e sem os campos só de leitura. */
+export function editableBody(collection: CatalogCollection, item: CatalogItem) {
+  const hidden = new Set(['key', ...(readOnlyFields[collection] ?? [])])
+  return structuredClone(Object.fromEntries(Object.entries(item).filter(([field]) => !hidden.has(field))))
+}
+
+export type AdminAccount =Account & { characters: number; battles: number }
 
 const catalogQueryKey = ['admin', 'catalog'] as const
 
@@ -88,10 +94,11 @@ function useCatalogMutation<T>(request: (input: T) => Promise<unknown>) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: request,
+    // espera o catálogo novo chegar: quem chama já encontra o item salvo (ex.: a variante criada de dentro do modelo)
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: catalogQueryKey })
       // o catálogo público (modelos, traços, NPCs) muda junto
       queryClient.invalidateQueries({ queryKey: ['catalog'] })
+      return queryClient.invalidateQueries({ queryKey: catalogQueryKey })
     },
   })
 }
