@@ -9,14 +9,27 @@ import { classIcons } from '@/features/game/class-icons'
 import {
   classLabels,
   useCreateSquad,
+  useFormationBonuses,
   useUpdateFormation,
   type Character,
+  type FormationBonusValues,
   type Squad,
   type SquadMember,
 } from '@/features/game/game-api'
-import { classAuras } from '@/features/game/game-labels'
 import { apiErrorMessage } from '@/lib/api'
 import { CharacterPortrait } from '@/features/game/character-art'
+import { BonusChips } from '@/features/squads/bonus-chips'
+import {
+  bonusKey,
+  bonusSource,
+  bonusValuesMessage,
+  cellBonuses,
+  classAuraText,
+  formationReports,
+  visualColumns,
+  type FormationBonus,
+  type FormationReport,
+} from '@/features/squads/formation-bonus'
 import { cn } from '@/lib/cn'
 
 const SQUAD_SIZE = 4
@@ -41,13 +54,6 @@ function membersOf(placement: Placement): SquadMember[] {
 }
 
 const hasFullBuild = (c: Character) => c.skills.filter((s) => s.buildSlot).length === 4
-
-/** Colunas da esquerda para a direita: fundo, meio, frente (a frente olha para o inimigo, à direita). */
-const visualColumns = [
-  { column: 2, label: 'Fundo' },
-  { column: 1, label: 'Meio' },
-  { column: 0, label: 'Frente' },
-]
 
 /**
  * Monta a formação: 4 personagens na grade 3x3. Clique num personagem e depois numa célula (ou arraste).
@@ -76,6 +82,14 @@ export function FormationEditor({ squad, characters, onCreated }: {
   const withoutBuild = members.map((m) => byId.get(m.characterId)).filter((c): c is Character => !!c && !hasFullBuild(c))
   const selectedCharacter = selected ? byId.get(selected) : undefined
   const bench = [...characters].sort((a, b) => b.level - a.level || a.name.localeCompare(b.name))
+  const bonusValues = useFormationBonuses()
+  const placedUnits = members.flatMap((m) => {
+    const character = byId.get(m.characterId)
+    return character ? [{ character, row: m.row, column: m.column }] : []
+  })
+  // sem os valores da API, nenhum percentual na tela
+  const reports = bonusValues.data ? formationReports(placedUnits, bonusValues.data) : []
+  const reportOf = (id?: string) => reports.find((r) => r.character.id === id)
 
   function edit(next: (p: Placement) => Placement) {
     save.reset()
@@ -160,6 +174,13 @@ export function FormationEditor({ squad, characters, onCreated }: {
                       key={key}
                       label={`Linha ${row + 1}, ${label}`}
                       character={character}
+                      bonuses={
+                        character
+                          ? (reportOf(character.id)?.bonuses ?? [])
+                          : bonusValues.data
+                            ? cellBonuses(placedUnits, { row, column }, bonusValues.data)
+                            : []
+                      }
                       front={column === 0}
                       selected={!!character && character.id === selected}
                       target={!!selected && selected !== character?.id && (!!character || placedIds.has(selected) || !full)}
@@ -182,10 +203,14 @@ export function FormationEditor({ squad, characters, onCreated }: {
           </p>
         </div>
 
-        {/* Selecionado: aura da classe */}
+        {/* Selecionado: aura da classe. Sem seleção: bônus da formação atual */}
         <div className="hud-corners flex flex-col justify-center border border-line/60 bg-surface/60 p-5 lg:max-w-md">
           {selectedCharacter ? (
-            <SelectedInfo character={selectedCharacter} />
+            <SelectedInfo character={selectedCharacter} report={reportOf(selectedCharacter.id)} values={bonusValues.data} failed={bonusValues.isError} />
+          ) : reports.length > 0 ? (
+            <FormationBonuses reports={reports} />
+          ) : members.length > 0 ? (
+            <p className="text-sm text-fg-subtle">{bonusValuesMessage(bonusValues.isError)}</p>
           ) : (
             <div className="space-y-2">
               <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">Como montar</p>
@@ -308,9 +333,11 @@ export function FormationEditor({ squad, characters, onCreated }: {
   )
 }
 
-function FormationCell({ label, character, front, selected, target, onClick, onRemove, dragProps, ...drop }: {
+function FormationCell({ label, character, bonuses, front, selected, target, onClick, onRemove, dragProps, ...drop }: {
   label: string
   character?: Character
+  /** Com personagem: o que ele recebe. Vazia: o que muda se alguém vier para cá. */
+  bonuses: FormationBonus[]
   front: boolean
   selected: boolean
   /** Há alguém selecionado que pode vir para esta célula. */
@@ -327,7 +354,7 @@ function FormationCell({ label, character, front, selected, target, onClick, onR
     <div className="group relative" {...drop}>
       <button
         type="button"
-        aria-label={character ? `${label}: ${character.name}` : `${label}: vazia`}
+        aria-label={`${label}: ${[character?.name ?? 'vazia', ...bonuses.map((b) => b.text)].join(', ')}`}
         aria-pressed={selected}
         onClick={onClick}
         {...dragProps}
@@ -339,7 +366,11 @@ function FormationCell({ label, character, front, selected, target, onClick, onR
               : 'border-primary-soft/50 bg-primary/12 shadow-[0_0_18px_rgb(139_92_246/0.25)] hover:border-primary-soft'
             : target
               ? 'border-dashed border-primary-soft/60 bg-primary/5'
-              : cn('border-silver/15 bg-white/[0.02] hover:border-silver/30', front && 'border-silver/25'),
+              : bonuses.length > 0
+                ? bonuses.every((b) => b.loss)
+                  ? 'border-warning/40 bg-warning/5 hover:border-warning/70'
+                  : 'border-primary-soft/40 bg-primary/8 hover:border-primary-soft/70'
+                : cn('border-silver/15 bg-white/[0.02] hover:border-silver/30', front && 'border-silver/25'),
         )}
       >
         {character ? (
@@ -353,11 +384,14 @@ function FormationCell({ label, character, front, selected, target, onClick, onR
               />
             </span>
             <span className="absolute inset-x-0 bottom-0 rounded-b-control bg-linear-to-t from-bg via-bg/80 to-transparent px-1.5 pt-5 pb-1 text-center">
+              {bonuses.length > 0 && <BonusChips bonuses={bonuses} className="mb-1" />}
               <span className="block truncate font-display text-sm leading-none font-bold uppercase tracking-wide text-silver-bright">{first}</span>
               <span className="font-mono text-[9px] text-primary-soft">LV {character.level}</span>
             </span>
             {!hasFullBuild(character) && <AlertTriangle className="absolute top-1.5 left-1.5 size-3 text-warning" aria-label="Build incompleta" />}
           </>
+        ) : bonuses.length > 0 ? (
+          <BonusChips bonuses={bonuses} />
         ) : (
           <span className="size-1 rounded-pill bg-silver/20" />
         )}
@@ -376,7 +410,50 @@ function FormationCell({ label, character, front, selected, target, onClick, onR
   )
 }
 
-function SelectedInfo({ character }: { character: Character }) {
+/** O que a posição dá ao personagem: bônus ativos e, se for o caso, por que o da própria classe não vale. */
+function ReportLines({ report }: { report: FormationReport }) {
+  if (report.bonuses.length === 0 && !report.idle) return <p className="text-xs text-fg-subtle">Nenhum bônus nesta posição.</p>
+  return (
+    <ul className="space-y-0.5 text-xs leading-relaxed">
+      {report.bonuses.map((bonus) => (
+        <li key={bonusKey(bonus)} className="text-primary-soft">
+          {bonus.text} <span className="text-fg-subtle">· {bonusSource(bonus)}</span>
+        </li>
+      ))}
+      {report.idle && <li className="text-fg-subtle">{report.idle}</li>}
+    </ul>
+  )
+}
+
+function FormationBonuses({ reports }: { reports: FormationReport[] }) {
+  return (
+    <div className="space-y-3">
+      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary-soft">Bônus da formação</p>
+      <ul className="space-y-2.5">
+        {reports.map((report) => (
+          <li key={report.character.id}>
+            <p className="truncate font-display text-base leading-tight font-bold uppercase tracking-wide text-silver-bright">
+              {report.character.name}
+            </p>
+            <ReportLines report={report} />
+          </li>
+        ))}
+      </ul>
+      <p className="border-t border-line/60 pt-3 text-xs leading-relaxed text-fg-subtle">
+        Os quadrados marcados mostram o que muda ao colocar alguém ali; em laranja, o bônus que um aliado perde. A aura vale
+        para os vizinhos (frente, trás e lados), e iguais não somam. Agrupar pega mais aura, mas leva mais dano de área. Clique em quem está na grade
+        para mover ou trocar.
+      </p>
+    </div>
+  )
+}
+
+function SelectedInfo({ character, report, values, failed }: {
+  character: Character
+  report?: FormationReport
+  values?: FormationBonusValues
+  failed: boolean
+}) {
   const Icon = classIcons[character.characterClass]
   return (
     <div className="space-y-3">
@@ -393,8 +470,16 @@ function SelectedInfo({ character }: { character: Character }) {
       </div>
       <div>
         <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary-soft">Aura</p>
-        <p className="text-sm leading-relaxed text-fg-muted">{classAuras[character.characterClass]}</p>
+        <p className="text-sm leading-relaxed text-fg-muted">
+          {values ? classAuraText(character.characterClass, values) : bonusValuesMessage(failed)}
+        </p>
       </div>
+      {report && (
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary-soft">Nesta posição</p>
+          <ReportLines report={report} />
+        </div>
+      )}
       {!hasFullBuild(character) && (
         <Badge tone="warning">
           <AlertTriangle className="size-3" />

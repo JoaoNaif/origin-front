@@ -67,6 +67,16 @@ Páginas usam `Page` e `PageHeader` (`src/components/layout/page.tsx`).
 O cartão da conta no pé da barra leva a `/conta` (`account-page.tsx`): números da conta, nome exibido e senha
 (`PATCH /me`, `useUpdateAccount`) e sair. Senha atual errada vem como 400, marcada no campo.
 
+## Bônus de formação
+
+Na montagem do esquadrão (`formation-editor.tsx`), cada personagem mostra na grade os bônus da posição atual, as células
+vazias mostram o que muda se alguém vier para elas (`cellBonuses`: o que recebe dos vizinhos e o bônus próprio que liga ou,
+em laranja, desliga em Executor e Artilharia da grade) e o painel ao lado detalha, a cada movimento e
+sem nova requisição. Os valores vêm da API (`GET /formation-bonuses`,
+`useFormationBonuses`, com cache como o resto do catálogo); sem resposta, a tela não mostra percentual. Só as condições
+(adjacência, fundo da linha, sem aliado ao lado, Vanguarda ancora) continuam espelhadas de `battle-engine.ts` em
+`src/features/squads/formation-bonus.ts`: **mudou a condição lá, muda aqui**. Quem aplica é o servidor.
+
 ## Rodando
 
 - Backend: `npm run start:dev` no `origin-game` (porta 3333).

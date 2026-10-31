@@ -224,6 +224,22 @@ export function useTraits() {
   })
 }
 
+/** Valores dos bônus de formação (D128). As condições de cada um estão em `formation-bonus.ts`. */
+export type FormationBonusValues = {
+  statAuras: { characterClass: CharacterClass; stat: Stat; percent: number }[]
+  supportHealPercent: number
+  artilleryBackDamagePercent: number
+  executorLoneAttackPercent: number
+}
+
+export function useFormationBonuses() {
+  return useQuery({
+    queryKey: ['catalog', 'formation-bonuses'],
+    queryFn: async () => (await api.get<{ formationBonuses: FormationBonusValues }>('/formation-bonuses')).data.formationBonuses,
+    staleTime: Infinity,
+  })
+}
+
 export function useSquads() {
   return useQuery({
     queryKey: ['me', 'squads'],
