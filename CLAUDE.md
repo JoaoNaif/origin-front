@@ -76,6 +76,8 @@ sem nova requisição. Os valores vêm da API (`GET /formation-bonuses`,
 `useFormationBonuses`, com cache como o resto do catálogo); sem resposta, a tela não mostra percentual. Só as condições
 (adjacência, fundo da linha, sem aliado ao lado, Vanguarda ancora) continuam espelhadas de `battle-engine.ts` em
 `src/features/squads/formation-bonus.ts`: **mudou a condição lá, muda aqui**. Quem aplica é o servidor.
+O ícone de ajuda sobre a grade abre o tutorial (`formation-tutorial.tsx`): um modal em passos com grades de exemplo que
+passam pelo mesmo cálculo, então nenhum número do tutorial é escrito à mão. Regra nova de formação: novo passo aqui.
 
 ## Rodando
 
