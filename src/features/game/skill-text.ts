@@ -16,6 +16,11 @@ export const statusEffects: Record<StatusType, string> = {
   MARK: 'recebe +20% de dano',
   DOT: 'perde 4% do HP máximo no início de cada turno',
   TAUNT: 'golpes de alvo único só podem mirar quem provocou',
+  SILENCE: 'na próxima ação, só pode usar a skill básica',
+  SLEEP: 'perde as ações até levar dano',
+  LINK: 'liga ao aliado vizinho com menos vida: 30% do dano direto em um também atinge o outro',
+  STEALTH: 'não pode ser escolhido por golpe de alvo único até a próxima vez dele',
+  CONTAGION: 'o Dano contínuo passa para os aliados vizinhos',
 }
 
 const num = (value: number) => value.toLocaleString('pt-BR', { maximumFractionDigits: 2 })
@@ -87,6 +92,8 @@ export function explainEffect(effect: SkillEffect): string {
       return `Troca o campo de batalha por ${effect.duration} rodadas, à sua escolha (bônus ×${num(effect.multiplier)}).`
     case 'RECOVER':
       return 'Alivia 50% do Desgaste acumulado.'
+    case 'CLEANSE':
+      return `Tira o pior status negativo ${self ? 'de quem usa' : 'do aliado'}.`
     case 'PROTECT':
       return 'Protege o aliado: até o seu próximo turno, os golpes de alvo único nele caem em você.'
     case 'GRANT_TURN':
@@ -125,6 +132,7 @@ function kindOf(effect: SkillEffect): SkillKind {
     case 'CHANGE_FIELD':
       return 'FIELD'
     case 'RECOVER':
+    case 'CLEANSE':
       return 'RECOVER'
   }
 }

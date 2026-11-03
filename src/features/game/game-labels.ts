@@ -134,4 +134,9 @@ export const statusLabels: Record<StatusType, string> = {
   MARK: 'Marcado',
   DOT: 'Dano contínuo',
   TAUNT: 'Provocado',
+  SILENCE: 'Silenciado',
+  SLEEP: 'Adormecido',
+  LINK: 'Ligado',
+  STEALTH: 'Furtivo',
+  CONTAGION: 'Contágio',
 }

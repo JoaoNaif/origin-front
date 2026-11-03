@@ -159,7 +159,7 @@
     }
   }
   /* Faixa "X usa Y" no centro do campo */
-  --animate-cast-in: cast-in 1.6s var(--ease-out-soft) forwards;
+  --animate-cast-in: cast-in 2.8s var(--ease-out-soft) forwards;
 
   @keyframes pop-up {
     0% {
@@ -191,7 +191,7 @@
       opacity: 1;
       transform: translateX(0) skewX(-8deg);
     }
-    80% {
+    90% {
       opacity: 1;
       transform: translateX(0) skewX(-8deg);
     }

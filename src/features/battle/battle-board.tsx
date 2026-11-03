@@ -5,8 +5,9 @@ import type { BattleUnit, Cell, Side } from '@/features/battle/battle-api'
 import { cellId, displayHp, toneText, type Float } from '@/features/battle/battle-events'
 import { CharacterSprite } from '@/features/game/character-art'
 import { scaleOf } from '@/features/game/character-images'
-import { classLabels, type CharacterClass, type StatBlock, type StatusType } from '@/features/game/game-api'
+import { classLabels, type CharacterClass, type StatBlock } from '@/features/game/game-api'
 import { statLabels, statOrder, statShort, statusLabels } from '@/features/game/game-labels'
+import { statInfo, statusDetails, statusShort, statusTone } from '@/features/game/glossary'
 import { statusEffects } from '@/features/game/skill-text'
 import { cn } from '@/lib/cn'
 
@@ -20,27 +21,6 @@ export type CellMark = {
   selected?: boolean
   /** Prévia curta (ex.: "-13 · 99%"). */
   preview?: string
-}
-
-const statusShort: Record<StatusType, string> = {
-  STUN: 'ATR',
-  LOCK: 'TRV',
-  ROOT: 'PRE',
-  EXPOSE: 'EXP',
-  MARK: 'MAR',
-  DOT: 'DOT',
-  TAUNT: 'PRV',
-}
-
-/** Cor da etiqueta: controle em laranja, o que aumenta o dano recebido em vermelho, Provocado em roxo. */
-const statusTone: Record<StatusType, string> = {
-  STUN: 'bg-warning text-bg',
-  LOCK: 'bg-warning text-bg',
-  ROOT: 'bg-warning text-bg',
-  EXPOSE: 'bg-danger text-white',
-  MARK: 'bg-danger text-white',
-  DOT: 'bg-danger text-white',
-  TAUNT: 'bg-primary text-on-primary',
 }
 
 /** Segundos de atraso na respiração: cada uma das 8 unidades num ponto diferente do ciclo. */
@@ -395,7 +375,7 @@ function UnitFigure({ side, cell, unit, ghost, active, mark, floats, hitKey, att
             {(unit.statuses.length > 0 || unit.protectedBy || unit.engaged) && (
               <span className="flex flex-wrap justify-center gap-0.5">
                 {unit.statuses.map((s) => (
-                  <span key={s} className={cn('px-1 font-mono text-[9px] leading-tight font-bold', statusTone[s])}>
+                  <span key={s} className={cn('px-1 font-mono text-[9px] leading-tight font-bold', statusTone[s])} title={`${statusLabels[s]}: ${statusEffects[s]}`}>
                     {statusShort[s]}
                   </span>
                 ))}
@@ -463,7 +443,9 @@ function UnitInspector({ unit, unitName, base }: {
   if (unit.engaged)
     conditions.push({ label: 'Engajado', short: 'ENG', tone: 'border border-line-strong text-fg-muted', text: 'na frente, encarando um Vanguarda, Guardião ou Executor: mover ou trocar custa o turno inteiro.' })
   // Provocado já aparece como condição (com quem provocou)
-  const statuses = unit.statuses.filter((s) => !(s === 'TAUNT' && unit.tauntedBy))
+  if (unit.linkedWith)
+    conditions.push({ label: 'Ligado', short: 'LIG', tone: statusTone.LINK, text: `a ${unitName(unit.linkedWith)}: 30% do dano direto em um também atinge o outro.` })
+  const statuses = unit.statuses.filter((s) => !(s === 'TAUNT' && unit.tauntedBy) && !(s === 'LINK' && unit.linkedWith))
 
   return (
     <span
@@ -488,6 +470,7 @@ function UnitInspector({ unit, unitName, base }: {
             <span className={cn('h-fit shrink-0 px-1 font-mono text-[9px] font-bold', statusTone[s])}>{statusShort[s]}</span>
             <span className="text-fg-muted">
               <span className="font-semibold text-fg">{statusLabels[s]}</span>: {statusEffects[s]}.
+              {statusDetails[s].note && <span className="block text-[11px] text-fg-subtle">{statusDetails[s].note}</span>}
             </span>
           </span>
         ))}
@@ -508,7 +491,7 @@ function UnitInspector({ unit, unitName, base }: {
               const now = Math.round(unit.stats![stat])
               const diff = base ? now - base[stat] : 0
               return (
-                <span key={stat} className="font-mono text-[10px]" title={statLabels[stat]}>
+                <span key={stat} className="font-mono text-[10px]" title={`${statLabels[stat]}: ${statInfo[stat]}`}>
                   <span className="text-fg-subtle">{statShort[stat]} </span>
                   <span className="text-fg tabular-nums">{now}</span>
                   {diff !== 0 && (

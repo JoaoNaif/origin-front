@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { FastForward, Swords, X } from 'lucide-react'
+import { FastForward, Swords, X, Zap } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { buttonClasses } from '@/components/ui/button-classes'
@@ -12,6 +12,7 @@ import {
   useRefreshAfterBattle,
   useSubmitAction,
   useTurnOptions,
+  type Battle,
   type BattleEvent,
   type BattleState,
   type BattleStep,
@@ -20,12 +21,23 @@ import {
   type TurnOption,
 } from '@/features/battle/battle-api'
 import { BattleBoard, type CellMark, type Grave } from '@/features/battle/battle-board'
-import { buildLog, cellId, eventContext, newEvents, stepDelay, stepUnits, type Float } from '@/features/battle/battle-events'
+import {
+  buildLog,
+  cellId,
+  eventContext,
+  newEvents,
+  openingUnits,
+  stepDelay,
+  stepUnits,
+  toneText,
+  type Float,
+} from '@/features/battle/battle-events'
 import { CombatLog, ResultOverlay, Timeline, TopBar } from '@/features/battle/battle-hud'
 import { useMe } from '@/features/auth/auth-api'
 import { useCharacters } from '@/features/game/game-api'
 import { classIcons } from '@/features/game/class-icons'
 import { apiErrorMessage, httpStatus } from '@/lib/api'
+import { statusLabels } from '@/features/game/game-labels'
 import { cn } from '@/lib/cn'
 
 /** Reprodução de uma jogada: os eventos que chegaram, aplicados um a um numa cópia só para exibir. */
@@ -38,17 +50,23 @@ type Playback = {
   impacted: Set<string>
   /** Sobe a cada dano: reinicia a animação de golpe mesmo no mesmo alvo. */
   hitId: number
-  /** Faixa "X usa Y" da skill desta vez (some no próximo TURN). */
-  cast: { id: number; ref: string; skillKey: string } | null
+  /** Faixa do topo do campo nesta vez (some no próximo TURN). */
+  banner: Banner | null
   /** Estado antes da jogada (topo e fila continuam nele até o fim). */
   before: BattleState
   /** Estado do servidor depois da jogada: entra quando a reprodução acaba. */
   after: BattleState
 }
 
+/** "X usa Y" com o que a skill fez em quem (cresce a cada evento), ou o aviso de quem perdeu a vez atordoado. */
+type Banner = { id: number; ref: string } & ({ kind: 'SKILL'; skillKey: string; results: Omit<Float, 'id' | 'big'>[] } | { kind: 'STUN'; reason: 'STUN' | 'SLEEP' })
+
 type Selection = { turnKey: string | null; mode: Mode; chosen: TurnOption | null }
 
 let floatId = 0
+
+// eventos cujo número também entra na faixa da skill
+const resultEvents = new Set<BattleEvent['type']>(['DAMAGE', 'DOT', 'MISS', 'HEAL', 'SHIELD', 'STATUS', 'DEFEATED'])
 
 const columnNames = ['frente', 'meio', 'fundo']
 const cellLabel = (cell: Cell) => `linha ${cell.row + 1}, ${columnNames[cell.column]}`
@@ -110,13 +128,26 @@ export function BattlePage() {
   useEffect(() => {
     if (!playback) return
     const previous = playback.queue[playback.index - 1]
-    const delay = previous ? stepDelay(previous) : 150
+    const next = playback.queue[playback.index]
+    let delay = previous ? stepDelay(previous) : 150
+    // antes da próxima vez (ou do fim), um respiro para ler o que a anterior fez
+    if (previous && previous.type !== 'TURN' && (!next || next.type === 'TURN')) delay = Math.max(delay, 1000)
     const timer = setTimeout(() => {
       if (playback.index >= playback.queue.length) return finish(playback)
       setPlayback((p) => {
         if (!p) return p
         const event = p.queue[p.index]
         const step = stepUnits(p.units, event)
+        const banner: Banner | null =
+          event.type === 'SKILL'
+            ? { id: ++floatId, ref: event.ref, kind: 'SKILL', skillKey: event.skillKey, results: [] }
+            : event.type === 'SKIP'
+              ? { id: ++floatId, ref: event.ref, kind: 'STUN', reason: event.reason }
+              : event.type === 'TURN'
+                ? null
+                : p.banner?.kind === 'SKILL' && resultEvents.has(event.type)
+                  ? { ...p.banner, results: [...p.banner.results, ...step.floats.map(({ ref, text, tone }) => ({ ref, text, tone }))].slice(-4) }
+                  : p.banner
         return {
           ...p,
           index: p.index + 1,
@@ -125,7 +156,7 @@ export function BattlePage() {
           floats: [...p.floats.slice(-10), ...step.floats.map((f) => ({ ...f, id: ++floatId }))],
           impacted: new Set(event.type === 'DAMAGE' ? [event.targetRef] : event.type === 'DOT' ? [event.ref] : []),
           hitId: event.type === 'DAMAGE' || event.type === 'DOT' ? p.hitId + 1 : p.hitId,
-          cast: event.type === 'SKILL' ? { id: ++floatId, ref: event.ref, skillKey: event.skillKey } : event.type === 'TURN' ? null : p.cast,
+          banner,
         }
       })
     }, delay)
@@ -144,10 +175,32 @@ export function BattlePage() {
       floats: [],
       impacted: new Set(),
       hitId: 0,
-      cast: null,
+      banner: null,
       before: state,
       after: { battle: step.battle, events: [...state.events, ...incoming] },
     })
+  }
+
+  // Abertura: se a máquina agiu antes da primeira vez do jogador, reproduz desde o começo (uma vez por tela).
+  // Ajustado no render: o estado já resolvido não chega a aparecer antes da reprodução.
+  const [openingChecked, setOpeningChecked] = useState(false)
+  if (state && !openingChecked) {
+    setOpeningChecked(true)
+    const start = openingUnits(state)
+    if (start)
+      setPlayback({
+        queue: state.events,
+        index: 0,
+        units: start,
+        activeRef: null,
+        floats: [],
+        impacted: new Set(),
+        hitId: 0,
+        banner: null,
+        // ninguém está na vez até o primeiro TURN da reprodução
+        before: { battle: { ...state.battle, units: start, turn: null }, events: [] },
+        after: state,
+      })
   }
 
   function execute(option: TurnOption) {
@@ -285,7 +338,7 @@ export function BattlePage() {
       />
 
       <main className="flex flex-1 flex-col gap-3 p-4 lg:px-6">
-        <Timeline battle={battle} units={units} />
+        <Timeline battle={playback ? playbackOrder(playback) : battle} units={units} />
 
         {/* Meio: detalhe da skill | grade | registro (a mesma altura, a grade no centro) */}
         <div className="grid flex-1 items-center gap-4 lg:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[16rem_minmax(0,1fr)_15rem] 2xl:grid-cols-[21rem_minmax(0,1fr)_19rem]">
@@ -296,15 +349,11 @@ export function BattlePage() {
                 mode={mode}
                 chosen={chosen}
                 focused={focused}
-                group={chosenGroup}
                 busy={submit.isPending}
                 error={error ?? (turnOptions.isError ? apiErrorMessage(turnOptions.error) : null)}
                 hoveredSkill={hoveredSkill}
                 unitName={context.name}
                 cellLabel={cellLabel}
-                fieldName={(key) => context.field(key)}
-                onChoose={execute}
-                onPreview={(option) => select({ chosen: option })}
                 onCancel={() => select({ mode: null, chosen: null })}
               />
             ) : (
@@ -318,7 +367,9 @@ export function BattlePage() {
           </div>
 
           <div className="relative order-1 flex min-w-0 justify-center pt-10 pb-2 lg:order-2">
-            {playback?.cast && <CastBanner key={playback.cast.id} unit={units.find((u) => u.ref === playback.cast!.ref)} skill={context.skill(playback.cast.skillKey)} />}
+            {playback?.banner && (
+              <CastBanner key={playback.banner.id} banner={playback.banner} unit={units.find((u) => u.ref === playback.banner!.ref)} context={context} />
+            )}
             <BattleBoard
               units={units}
               ghosts={graves}
@@ -328,7 +379,7 @@ export function BattlePage() {
               impacted={playback?.impacted ?? new Set()}
               hitId={playback?.hitId ?? 0}
               // quem age avança: a faixa "X usa Y" marca quem e muda a cada skill
-              acting={playback?.cast ?? null}
+              acting={playback?.banner?.kind === 'SKILL' ? playback.banner : null}
               // o painel da unidade cobriria a animação
               inspect={!playback}
               onCellClick={(side, cell) => {
@@ -367,9 +418,14 @@ export function BattlePage() {
             loading={turnOptions.isPending}
             mode={mode}
             chosen={chosen}
+            group={chosenGroup}
             busy={submit.isPending}
+            unitName={context.name}
+            cellLabel={cellLabel}
+            fieldName={(key) => context.field(key)}
             onMode={(next) => select({ mode: next, chosen: null })}
             onChoose={execute}
+            onPreview={(option) => select({ chosen: option })}
             onHoverSkill={setHoveredSkill}
           />
         ) : finished ? (
@@ -407,6 +463,28 @@ export function BattlePage() {
   )
 }
 
+type TurnEvent = Extract<BattleEvent, { type: 'TURN' }>
+const turnEvents = (events: BattleEvent[]) => events.filter((e): e is TurnEvent => e.type === 'TURN')
+
+/**
+ * Ordem das vezes durante a reprodução: a fila anda a cada TURN (quem agiu sai, o próximo vira o atual). Vêm as vezes
+ * que ainda faltam na reprodução e depois a fila do servidor no fim da jogada.
+ */
+function playbackOrder(p: Playback): Battle {
+  const { before, after } = p
+  const current = turnEvents(p.queue.slice(0, p.index)).at(-1)
+  const remaining = turnEvents(p.queue.slice(p.index)).map((t) => ({ ref: t.ref, round: t.round, extra: !!t.extra }))
+  // o último TURN da reprodução costuma ser a vez que o servidor já mostra como atual no fim
+  const lastRef = turnEvents(p.queue).at(-1)?.ref
+  const end = after.battle.turn && after.battle.turn.ref !== lastRef ? [{ ref: after.battle.turn.ref, round: after.battle.round, extra: false }] : []
+  return {
+    ...before.battle,
+    round: current?.round ?? before.battle.round,
+    turn: current ? { ref: current.ref, side: p.units.find((u) => u.ref === current.ref)?.side ?? 'PLAYER' } : before.battle.turn,
+    timeline: [...remaining, ...end, ...after.battle.timeline].slice(0, 8),
+  }
+}
+
 function FullScreenMessage({ title, detail, loading }: { title: string; detail: string; loading?: boolean }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-bg px-6 text-center">
@@ -422,23 +500,48 @@ function FullScreenMessage({ title, detail, loading }: { title: string; detail: 
   )
 }
 
-/** "SUNNA usa CONGELAR": entra no topo do campo a cada skill, na cor do lado. */
-function CastBanner({ unit, skill }: { unit?: BattleUnit; skill: string }) {
+/**
+ * Pop-up do topo do campo, na cor do lado: "SEU ATAQUE · SUNNA usa CONGELAR" com o que a skill fez em quem (cresce a
+ * cada evento), ou "SUNNA está atordoada e perde a vez" quando a vez chega em quem está Atordoado.
+ */
+function CastBanner({ banner, unit, context }: { banner: Banner; unit?: BattleUnit; context: ReturnType<typeof eventContext> }) {
   if (!unit) return null
-  const Icon = classIcons[unit.characterClass]
+  const Icon = banner.kind === 'STUN' ? Zap : classIcons[unit.characterClass]
   const ally = unit.side === 'PLAYER'
+  const accent = banner.kind === 'STUN' ? 'text-warning' : ally ? 'text-primary-soft' : 'text-danger-hover'
   return (
     <div className="pointer-events-none absolute top-0 left-1/2 z-40 -translate-x-1/2">
       <div
         className={cn(
-          'flex animate-cast-in items-center gap-3 border-y px-6 py-2 whitespace-nowrap shadow-panel',
+          'flex animate-cast-in flex-col items-center gap-1 border-y px-6 py-2 whitespace-nowrap shadow-panel',
           ally ? 'border-primary-soft/60 bg-primary-dim' : 'border-enemy/60 bg-danger-dim',
         )}
       >
-        <Icon className={cn('size-5', ally ? 'text-primary-soft' : 'text-danger-hover')} />
-        <span className="font-display text-lg font-bold uppercase tracking-wide text-fg">{unit.name.split(' ')[0]}</span>
-        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-fg-subtle">usa</span>
-        <span className={cn('font-display text-2xl font-extrabold uppercase italic', ally ? 'text-primary-soft' : 'text-danger-hover')}>{skill}</span>
+        <span className={cn('font-mono text-[10px] uppercase tracking-[0.24em]', accent)}>
+          {banner.kind === 'STUN' ? statusLabels[banner.reason] : ally ? 'Seu ataque' : 'Ataque inimigo'}
+        </span>
+        <div className="flex items-center gap-3">
+          <Icon className={cn('size-5', accent)} />
+          <span className="font-display text-lg font-bold uppercase tracking-wide text-fg">{unit.name.split(' ')[0]}</span>
+          {banner.kind === 'STUN' ? (
+            <span className="font-display text-xl font-extrabold uppercase italic text-warning">perde a vez</span>
+          ) : (
+            <>
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-fg-subtle">usa</span>
+              <span className={cn('font-display text-2xl font-extrabold uppercase italic', accent)}>{context.skill(banner.skillKey)}</span>
+            </>
+          )}
+        </div>
+        {banner.kind === 'SKILL' && banner.results.length > 0 && (
+          <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.12em]">
+            {banner.results.map((r, i) => (
+              <span key={i} className="flex items-center gap-1.5">
+                <span className="text-fg-muted">{context.name(r.ref).split(' ')[0]}</span>
+                <span className={cn('font-bold', toneText[r.tone])}>{r.text}</span>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

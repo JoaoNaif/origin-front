@@ -13,7 +13,8 @@ import {
   type CharacterClass,
   type Stat,
 } from '@/features/game/game-api'
-import { statOrder, statShort } from '@/features/game/game-labels'
+import { statLabels, statOrder, statShort } from '@/features/game/game-labels'
+import { statInfo } from '@/features/game/glossary'
 import { CharacterPortrait, PortraitPop } from '@/features/game/character-art'
 import { cn } from '@/lib/cn'
 
@@ -236,7 +237,10 @@ function CharacterCard({ character, index, offers }: { character: Character; ind
       <dl className="relative mt-auto grid grid-cols-6 gap-1.5 border-t border-line/70 pt-3">
         {cardStats.map((stat) => (
           <div key={stat} className="space-y-1 text-center">
-            <dt className="font-mono text-[9px] text-fg-subtle">{statShort[stat]}</dt>
+            {/* o cartão é um link: dica nativa (o Term é botão) */}
+            <dt className="font-mono text-[9px] text-fg-subtle" title={`${statLabels[stat]}: ${statInfo[stat]}`}>
+              {statShort[stat]}
+            </dt>
             <dd className="font-mono text-xs text-fg tabular-nums">{character.stats[stat]}</dd>
             <div className="h-0.5 bg-overlay">
               <div className="h-full bg-silver/50" style={{ width: `${top ? (character.stats[stat] / top) * 100 : 0}%` }} />

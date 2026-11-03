@@ -7,6 +7,7 @@ import { BattlePage } from '@/pages/battle-page'
 import { CharacterPage } from '@/pages/character-page'
 import { CharactersPage } from '@/pages/characters-page'
 import { DesignPage } from '@/pages/design-page'
+import { GuidePage } from '@/pages/guide-page'
 import { HistoryPage } from '@/pages/history-page'
 import { HomePage } from '@/pages/home-page'
 import { LoginPage } from '@/pages/login-page'
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
           { path: '/personagens/:id', element: <CharacterPage /> },
           { path: '/esquadroes', element: <SquadsPage /> },
           { path: '/historico', element: <HistoryPage /> },
+          { path: '/guia', element: <GuidePage /> },
           { path: '/conta', element: <AccountPage /> },
           // Admin: carregado só para quem entra nele
           {

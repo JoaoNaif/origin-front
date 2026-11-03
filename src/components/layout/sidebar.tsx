@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   History,
   House,
   LayoutGrid,
@@ -50,7 +51,10 @@ export function Sidebar({ collapsed, onToggleCollapsed, onNavigate }: SidebarPro
     },
     {
       title: 'Registro',
-      items: [{ to: '/historico', label: 'Histórico', icon: History }],
+      items: [
+        { to: '/historico', label: 'Histórico', icon: History },
+        { to: '/guia', label: 'Guia', icon: BookOpen },
+      ],
     },
     {
       title: 'Em breve',

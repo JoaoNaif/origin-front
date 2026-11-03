@@ -1,8 +1,11 @@
 import { useState, type ReactNode } from 'react'
-import { Minus, Plus, RotateCcw } from 'lucide-react'
+import { BookOpen, Minus, Plus, RotateCcw } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { Term } from '@/components/ui/term'
 import { useAllocateFreePoints, type Character, type Stat, type StatBlock } from '@/features/game/game-api'
 import { statLabels, statOrder, statShort } from '@/features/game/game-labels'
+import { statInfo } from '@/features/game/glossary'
 import { apiErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/cn'
 
@@ -56,7 +59,9 @@ export function StatsPanel({ character }: { character: Character }) {
               </span>
               <div className="min-w-0 space-y-1">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="truncate text-xs text-fg-subtle">{statLabels[stat]}</span>
+                  <Term title={statLabels[stat]} info={statInfo[stat]} className="text-xs text-fg-subtle hover:text-fg">
+                    {statLabels[stat]}
+                  </Term>
                   <span className="font-mono text-sm text-fg tabular-nums">
                     {value}
                     {delta !== 0 && (
@@ -99,6 +104,13 @@ export function StatsPanel({ character }: { character: Character }) {
           )
         })}
       </ul>
+
+      <Link
+        to="/guia#atributos"
+        className="focus-ring mt-4 flex w-fit items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle transition-colors hover:text-primary-soft"
+      >
+        <BookOpen className="size-3.5" /> O que cada atributo faz
+      </Link>
 
       {(dirty || save.isError) && (
         <div className="mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-line/70 pt-4">

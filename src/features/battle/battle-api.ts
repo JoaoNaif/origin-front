@@ -77,6 +77,8 @@ export type BattleUnit = {
   position: Cell | null
   statuses: StatusType[]
   tauntedBy: string | null
+  /** Parceiro do Ligado. */
+  linkedWith: string | null
   protectedBy: string | null
   engaged: boolean
   /** Nulos no inimigo. */
@@ -110,12 +112,14 @@ export type Battle = {
 /** `src/domain/combat/engine/battle-events.ts` no backend. */
 export type BattleEvent =
   | { type: 'TURN'; ref: string; round: number; tick: number; extra?: boolean }
-  | { type: 'SKIP'; ref: string; reason: 'STUN' }
+  | { type: 'SKIP'; ref: string; reason: 'STUN' | 'SLEEP' }
+  | { type: 'WOKE'; ref: string }
+  | { type: 'CLEANSE'; ref: string; targetRef: string; status: StatusType | null }
   | { type: 'DOT'; ref: string; amount: number }
   | { type: 'SKILL'; ref: string; skillKey: string; potency: number }
   | { type: 'INTERCEPT'; guardianRef: string; protectedRef: string }
   | { type: 'MISS'; ref: string; targetRef: string }
-  | { type: 'DAMAGE'; ref: string; targetRef: string; amount: number; shieldAbsorbed: number }
+  | { type: 'DAMAGE'; ref: string; targetRef: string; amount: number; shieldAbsorbed: number; linked?: boolean }
   | { type: 'HEAL' | 'SHIELD' | 'PROTECT' | 'GRANT_TURN'; ref: string; targetRef: string; amount?: number }
   | { type: 'EXPLOIT'; targetRef: string; status: StatusType; consumed: boolean }
   | { type: 'PROTECTED'; protectorRef: string; protectedRef: string }
@@ -148,6 +152,7 @@ export type PreviewEffect =
   | { type: 'REPOSITION'; kind: 'PUSH' | 'PULL' | 'SWAP' | 'MOVE_ALLY' | 'DASH'; chance: number }
   | { type: 'TURN_SHIFT'; percent: number }
   | { type: 'RECOVER'; relieved: number }
+  | { type: 'CLEANSE'; status: StatusType | null }
   | { type: 'CHANGE_FIELD' | 'PROTECT' | 'GRANT_TURN' | 'EXPLOIT' }
 
 export type TurnOption = {

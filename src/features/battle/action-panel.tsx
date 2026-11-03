@@ -39,6 +39,8 @@ function describePreview(effect: PreviewEffect): string {
       return `Alivia ${percent(effect.relieved)} do Desgaste`
     case 'CHANGE_FIELD':
       return 'Troca o campo'
+    case 'CLEANSE':
+      return effect.status ? `Tira ${statusLabels[effect.status]}` : 'Nada para tirar'
     case 'PROTECT':
       return 'Protege'
     case 'GRANT_TURN':
@@ -52,15 +54,23 @@ function describePreview(effect: PreviewEffect): string {
  * Barra de baixo na vez do jogador: quem age, as 4 skills em slots de tamanho fixo e mover, trocar e defender.
  * O detalhe da skill (por extenso) fica no ActionDetail, à esquerda da grade.
  */
-export function ActionBar({ actor, options, loading, mode, chosen, busy, onMode, onChoose, onHoverSkill }: {
+export function ActionBar({ actor, options, loading, mode, chosen, group, busy, unitName, cellLabel, fieldName, onMode, onChoose, onPreview, onHoverSkill }: {
   actor: BattleUnit
   options: TurnOption[]
   loading: boolean
   mode: Mode
   chosen: TurnOption | null
+  /** Opções que dividem o alvo clicado (as escolhas extras: trocar com, mover para, campo). */
+  group: TurnOption[]
   busy: boolean
+  unitName: (ref: string) => string
+  cellLabel: (cell: Cell) => string
+  fieldName: (key: string) => string
   onMode: (mode: Mode) => void
+  /** Envia a jogada. */
   onChoose: (option: TurnOption) => void
+  /** Mouse numa escolha extra: a prévia mostra ela. */
+  onPreview: (option: TurnOption) => void
   /** Skill sob o mouse (nulo ao sair da barra): o detalhe mostra ela. */
   onHoverSkill: (key: string | null) => void
 }) {
@@ -91,16 +101,46 @@ export function ActionBar({ actor, options, loading, mode, chosen, busy, onMode,
       {/* As 4 skills: em linha a partir de 1536px, 2 x 2 abaixo */}
       <div className="relative grid content-start gap-2 sm:grid-cols-2 2xl:grid-cols-4" onMouseLeave={() => onHoverSkill(null)}>
         {actor.skills.map((skill, i) => (
-          <SkillSlot
-            key={skill.key}
-            skill={skill}
-            hotkey={i + 1}
-            usable={options.some((o) => o.payload.type === 'SKILL' && o.payload.skillKey === skill.key)}
-            active={selectedKey === skill.key}
-            disabled={busy || loading}
-            onHover={() => onHoverSkill(skill.key)}
-            onClick={() => onMode(selectedKey === skill.key ? null : { kind: 'SKILL', skillKey: skill.key })}
-          />
+          <div key={skill.key} className="relative min-w-0">
+            {/* Escolhas extras logo acima da skill: a jogada só sai com uma delas */}
+            {selectedKey === skill.key && chosen && group.length > 1 && (
+              <div
+                className={cn(
+                  'absolute bottom-full z-30 mb-2 w-max max-w-sm min-w-full space-y-2 border border-primary-soft/70 bg-primary-dim p-3 shadow-[0_0_18px_rgb(139_92_246/0.35)]',
+                  i % 2 === 0 ? 'left-0' : 'right-0',
+                )}
+              >
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary-soft">Escolha como usar · {group.length} opções</p>
+                <div className="grid max-h-52 gap-1.5 overflow-y-auto">
+                  {group.map((option, j) => (
+                    <button
+                      key={j}
+                      type="button"
+                      onClick={() => onChoose(option)}
+                      onMouseEnter={() => !busy && onPreview(option)}
+                      disabled={busy}
+                      aria-pressed={option === chosen}
+                      className={cn(
+                        'focus-ring rounded-control border px-3 py-2 text-left text-sm font-medium transition-colors disabled:opacity-40',
+                        option === chosen ? 'border-primary-soft bg-primary/25 text-fg' : 'border-line-strong bg-surface text-fg-muted hover:border-primary-soft/60 hover:text-fg',
+                      )}
+                    >
+                      {extraLabel(option, unitName, cellLabel, fieldName)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <SkillSlot
+              skill={skill}
+              hotkey={i + 1}
+              usable={options.some((o) => o.payload.type === 'SKILL' && o.payload.skillKey === skill.key)}
+              active={selectedKey === skill.key}
+              disabled={busy || loading}
+              onHover={() => onHoverSkill(skill.key)}
+              onClick={() => onMode(selectedKey === skill.key ? null : { kind: 'SKILL', skillKey: skill.key })}
+            />
+          </div>
         ))}
         {loading && (
           <span className="absolute -top-5 right-0 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle">
@@ -120,27 +160,20 @@ export function ActionBar({ actor, options, loading, mode, chosen, busy, onMode,
 }
 
 /**
- * Painel à esquerda da grade: a skill por extenso (a do mouse, ou a escolhida), a prévia do alvo e as escolhas extras.
- * Não há "Executar": o clique no alvo (ou na escolha extra) já envia a jogada.
+ * Painel à esquerda da grade: a skill por extenso (a do mouse, ou a escolhida) e a prévia do alvo. As escolhas extras
+ * ficam acima da skill na ActionBar. Não há "Executar": o clique no alvo (ou na escolha extra) já envia a jogada.
  */
-export function ActionDetail({ actor, mode, chosen, focused, group, busy, error, hoveredSkill, unitName, cellLabel, fieldName, onChoose, onPreview, onCancel }: {
+export function ActionDetail({ actor, mode, chosen, focused, busy, error, hoveredSkill, unitName, cellLabel, onCancel }: {
   actor: BattleUnit
   mode: Mode
   chosen: TurnOption | null
   /** Opção sob o mouse (ou a escolhida). */
   focused: TurnOption | null
-  /** Opções que dividem o mesmo alvo (as escolhas extras: trocar com, mover para, campo). */
-  group: TurnOption[]
   busy: boolean
   error: string | null
   hoveredSkill: string | null
   unitName: (ref: string) => string
   cellLabel: (cell: Cell) => string
-  fieldName: (key: string) => string
-  /** Envia a jogada. */
-  onChoose: (option: TurnOption) => void
-  /** Mouse numa escolha extra: a prévia mostra ela. */
-  onPreview: (option: TurnOption) => void
   onCancel: () => void
 }) {
   const selectedKey = mode?.kind === 'SKILL' ? mode.skillKey : null
@@ -177,29 +210,6 @@ export function ActionDetail({ actor, mode, chosen, focused, group, busy, error,
           </p>
         )}
 
-        {chosen && group.length > 1 && (
-          <div className="space-y-1">
-            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">Escolha</p>
-            <div className="flex flex-wrap gap-1.5">
-              {group.map((option, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => onChoose(option)}
-                  onMouseEnter={() => !busy && onPreview(option)}
-                  disabled={busy}
-                  aria-pressed={option === chosen}
-                  className={cn(
-                    'focus-ring rounded-control border px-2 py-1 text-xs transition-colors',
-                    option === chosen ? 'border-primary-soft bg-primary/20 text-fg' : 'border-line-strong text-fg-muted hover:text-fg',
-                  )}
-                >
-                  {extraLabel(option, unitName, cellLabel, fieldName)}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
         {error && <p className="text-xs text-danger">{error}</p>}
       </div>
 
@@ -255,7 +265,7 @@ function SkillSlot({ skill, hotkey, usable, active, disabled, onHover, onClick }
       aria-pressed={active}
       aria-label={`${hotkey}: ${skill.name}${!skill.ready ? ' (em recarga)' : !usable ? ' (sem alvo)' : ''}`}
       className={cn(
-        'focus-ring chamfer relative flex h-19 min-w-0 items-center gap-3 px-3 short:h-16 text-left [--cut:12px] transition-all duration-150 ease-out-soft',
+        'focus-ring chamfer relative flex h-19 w-full min-w-0 items-center gap-3 px-3 short:h-16 text-left [--cut:12px] transition-all duration-150 ease-out-soft',
         active
           ? // fundo opaco: o chanfro pinta a borda por baixo, e um fundo translúcido deixaria o roxo claro vazar
             '[--chamfer-bg:var(--color-primary-dim)] [--chamfer-border:var(--color-primary-soft)] drop-shadow-[0_0_14px_rgb(139_92_246/0.45)]'

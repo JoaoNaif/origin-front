@@ -1,7 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { ChevronDown, ChevronRight, Play, Skull, Sparkles, Swords } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { Page, PageHeader } from '@/components/layout/page'
+import { Page } from '@/components/layout/page'
+import { BannerMeta, PageBanner } from '@/components/layout/page-banner'
 import { Badge } from '@/components/ui/badge'
 import { buttonClasses } from '@/components/ui/button-classes'
 import { classIcons } from '@/features/game/class-icons'
@@ -17,6 +18,9 @@ import {
 } from '@/features/game/game-api'
 import { battleOutcome, endReasonLabels, outcomeLabels, profileLabels, type BattleOutcome } from '@/features/game/game-labels'
 import { cn } from '@/lib/cn'
+
+/** Arte do topo (public/art). Sem o arquivo, fica só o fundo. */
+const HISTORY_ART = '/art/banner-adagas.jpg'
 
 type Filter = 'ALL' | BattleOutcome
 
@@ -64,83 +68,108 @@ export function HistoryPage() {
   )
 
   return (
-    <Page>
-      <PageHeader eyebrow="Registro" title="Histórico" description="Suas últimas 50 batalhas contra a máquina." />
+    <div className="pb-12">
+      <PageBanner
+        art={HISTORY_ART}
+        outlineWord="Registro"
+        meta={
+          <>
+            <Badge tone="primary">
+              <Swords className="size-3" />
+              Registro
+            </Badge>
+            {battles.data && (
+              <BannerMeta>
+                {finished.length} {finished.length === 1 ? 'batalha encerrada' : 'batalhas encerradas'}
+              </BannerMeta>
+            )}
+          </>
+        }
+        title={
+          <>
+            Histó
+            <span className="text-gradient-primary pr-3">rico</span>
+          </>
+        }
+        description="Suas últimas 50 batalhas contra a máquina: vitórias, derrotas e quem ficou de pé."
+      />
 
-      {inProgress && <ResumeTile battle={inProgress} />}
+      <Page className="pt-10 lg:pt-10">
+        {inProgress && <ResumeTile battle={inProgress} />}
 
-      {battles.isPending ? (
-        <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {Array.from({ length: 4 }, (_, i) => (
-              <div key={i} className="h-24 animate-pulse bg-raised" />
-            ))}
-          </div>
-          <div className="h-80 animate-pulse bg-raised" />
-        </div>
-      ) : battles.isError ? (
-        <Empty title="Não foi possível carregar o histórico" detail="Verifique a conexão e recarregue a página." />
-      ) : finished.length === 0 ? (
-        <Empty
-          title="Nenhum combate registrado"
-          detail="Sua primeira batalha aparece aqui."
-          action={
-            <Link to="/batalhar" className={buttonClasses({ size: 'sm', variant: 'secondary', className: 'mt-2' })}>
-              Primeira batalha
-            </Link>
-          }
-        />
-      ) : (
-        <>
-          <Summary battles={finished} />
-
-          {/* Filtros */}
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
-            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar por resultado">
-              {filters.map((f) => (
-                <Chip key={f.value} active={filter === f.value} onClick={() => setFilter(f.value)}>
-                  {f.label}
-                </Chip>
+        {battles.isPending ? (
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 4 }, (_, i) => (
+                <div key={i} className="h-24 animate-pulse bg-raised" />
               ))}
             </div>
-            {difficulties.length > 1 && (
-              <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Filtrar por dificuldade">
-                <span className="mr-1 font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">Dificuldade</span>
-                {[null, ...difficulties].map((d) => (
-                  <button
-                    key={d ?? 'all'}
-                    type="button"
-                    aria-pressed={difficulty === d}
-                    onClick={() => setDifficulty(d)}
-                    className={cn(
-                      'focus-ring rounded-control px-2 py-1 font-mono text-[11px] uppercase tracking-[0.12em] transition-colors',
-                      difficulty === d ? 'bg-raised text-fg' : 'text-fg-subtle hover:text-fg-muted',
-                    )}
-                  >
-                    {d ? difficultyLabels[d] : 'Todas'}
-                  </button>
+            <div className="h-80 animate-pulse bg-raised" />
+          </div>
+        ) : battles.isError ? (
+          <Empty title="Não foi possível carregar o histórico" detail="Verifique a conexão e recarregue a página." />
+        ) : finished.length === 0 ? (
+          <Empty
+            title="Nenhum combate registrado"
+            detail="Sua primeira batalha aparece aqui."
+            action={
+              <Link to="/batalhar" className={buttonClasses({ size: 'sm', variant: 'secondary', className: 'mt-2' })}>
+                Primeira batalha
+              </Link>
+            }
+          />
+        ) : (
+          <>
+            <Summary battles={finished} />
+
+            {/* Filtros */}
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar por resultado">
+                {filters.map((f) => (
+                  <Chip key={f.value} active={filter === f.value} onClick={() => setFilter(f.value)}>
+                    {f.label}
+                  </Chip>
                 ))}
               </div>
-            )}
-          </div>
+              {difficulties.length > 1 && (
+                <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Filtrar por dificuldade">
+                  <span className="mr-1 font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">Dificuldade</span>
+                  {[null, ...difficulties].map((d) => (
+                    <button
+                      key={d ?? 'all'}
+                      type="button"
+                      aria-pressed={difficulty === d}
+                      onClick={() => setDifficulty(d)}
+                      className={cn(
+                        'focus-ring rounded-control px-2 py-1 font-mono text-[11px] uppercase tracking-[0.12em] transition-colors',
+                        difficulty === d ? 'bg-raised text-fg' : 'text-fg-subtle hover:text-fg-muted',
+                      )}
+                    >
+                      {d ? difficultyLabels[d] : 'Todas'}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
-          {shown.length === 0 ? (
-            <p className="py-10 text-center text-sm text-fg-muted">Nenhuma batalha com esse filtro.</p>
-          ) : (
-            <ul className="divide-y divide-line/70 border border-line bg-surface/60">
-              {shown.map((battle) => (
-                <BattleRow
-                  key={battle.id}
-                  battle={battle}
-                  open={open === battle.id}
-                  onToggle={() => setOpen(open === battle.id ? null : battle.id)}
-                />
-              ))}
-            </ul>
-          )}
-        </>
-      )}
-    </Page>
+            {shown.length === 0 ? (
+              <p className="py-10 text-center text-sm text-fg-muted">Nenhuma batalha com esse filtro.</p>
+            ) : (
+              <ul className="divide-y divide-line/70 border border-line bg-surface/60">
+                {shown.map((battle) => (
+                  <BattleRow
+                    key={battle.id}
+                    battle={battle}
+                    open={open === battle.id}
+                    onToggle={() => setOpen(open === battle.id ? null : battle.id)}
+                  />
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </Page>
+    </div>
   )
 }
 

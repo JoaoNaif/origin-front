@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowButton, Carousel } from '@/components/ui/carousel'
 import { buttonClasses } from '@/components/ui/button-classes'
 import { SectionTitle } from '@/components/layout/page'
+import { BannerArt } from '@/components/layout/page-banner'
 import { useMe } from '@/features/auth/auth-api'
 import {
   classLabels,
@@ -98,7 +99,7 @@ export function HomePage() {
     {
       key: 'personagens',
       name: 'Personagens',
-      art: '/art/banner-sunna.jpg',
+      art: '/art/banner-lanca.jpg',
       eyebrow: 'Personagens',
       title: ['Evolua', 'o elenco'],
       text: 'Cada batalha dá experiência. A cada 5 níveis, um bloco de skill novo: escolha o que entra na build de cada personagem.',
@@ -340,17 +341,12 @@ function LobbyBackdrop({ arts, index }: { arts: string[]; index: number }) {
   return (
     <div className="pointer-events-none absolute inset-0 -z-10 bg-bg">
       {arts.map((art, i) => (
-        <img
+        // a arte inteira, sem recorte; só a do slide atual aparece
+        <BannerArt
           key={art}
           src={art}
-          alt=""
+          loaded={i === index && !!loaded[art]}
           onLoad={() => setLoaded((l) => ({ ...l, [art]: true }))}
-          onError={(e) => (e.currentTarget.hidden = true)}
-          className={cn(
-            // ancorada no topo: a cabeça do personagem fica no alto da arte e não pode ser cortada
-            'absolute inset-y-0 right-0 h-full w-full object-cover object-[right_top] transition-opacity duration-700 ease-out-soft lg:w-3/4',
-            i === index && loaded[art] ? 'opacity-100' : 'opacity-0',
-          )}
         />
       ))}
       {/* Sem arte: grade em perspectiva e quadriculado. Com arte: só o necessário para o texto ficar legível. */}
@@ -360,10 +356,10 @@ function LobbyBackdrop({ arts, index }: { arts: string[]; index: number }) {
       <div
         className={cn(
           'absolute inset-0 bg-linear-to-r from-bg to-transparent',
-          artLoaded ? 'via-bg/60 via-40%' : 'via-bg/85',
+          artLoaded ? 'via-bg/60 via-30% to-60%' : 'via-bg/85',
         )}
       />
-      <div className="absolute inset-0 bg-linear-to-t from-bg via-transparent to-transparent" />
+      <div className="absolute inset-0 bg-linear-to-t from-bg to-transparent to-20%" />
       <div className="absolute inset-0 scanlines" />
       <span className="absolute -bottom-10 -left-4 font-display text-[16rem] leading-none font-extrabold italic text-outline select-none">
         ORIGIN

@@ -241,6 +241,7 @@ export const skillEffectSpecs: Record<string, EffectSpec> = {
     fields: [duration(2), { name: 'multiplier', label: 'Multiplicador', kind: 'number', default: 1.5, step: 0.1 }, appliesTo],
   },
   RECOVER: { label: 'Recuperar', description: 'Alivia 50% do Desgaste acumulado.', fields: [appliesTo] },
+  CLEANSE: { label: 'Purificar', description: 'Tira o pior status negativo do aliado.', fields: [appliesTo] },
   PROTECT: {
     label: 'Proteger',
     description: 'Até o próximo turno, golpes de alvo único no aliado adjacente caem em quem usou.',
@@ -369,8 +370,8 @@ export const emptyBodies: Record<CatalogCollection, () => Record<string, unknown
     exclusivity: 'NONE',
     variants: [],
     familyTraitKey: null,
-    // perfil do Vanguarda no seed (orçamento 670)
-    stats: { HP: 700, ATTACK: 100, DEFENSE: 120, SPEED: 75, PRECISION: 85, EVASION: 55, WILL: 95 },
+    // perfil do Vanguarda no seed (orçamento 695)
+    stats: { HP: 700, ATTACK: 105, DEFENSE: 120, SPEED: 80, PRECISION: 100, EVASION: 55, WILL: 95 },
     passive: { name: '', description: '', trigger: { type: 'ON_HIT' }, effects: [{ type: 'REDUCE_DAMAGE', percent: 15 }] },
   }),
   skills: (): SkillBody => ({

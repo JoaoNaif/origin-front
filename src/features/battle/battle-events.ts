@@ -1,4 +1,4 @@
-import type { Battle, BattleEvent, BattleUnit, Cell, Side } from '@/features/battle/battle-api'
+import type { Battle, BattleEvent, BattleState, BattleUnit, Cell, Side } from '@/features/battle/battle-api'
 import { statLabels, statusLabels } from '@/features/game/game-labels'
 
 // Leitura dos eventos que o servidor mandou: texto do registro e o passo visual da animação.
@@ -66,13 +66,19 @@ function describeEvent(event: BattleEvent, ctx: Context): Omit<LogEntry, 'id'> |
     case 'ROUND_END':
       return null
     case 'SKIP':
-      return { icon: 'skip', text: `${ctx.name(event.ref)} está Atordoado e perde a vez`, tone: 'status' }
+      return { icon: 'skip', text: `${ctx.name(event.ref)} está ${statusLabels[event.reason]} e perde a vez`, tone: 'status' }
+    case 'WOKE':
+      return { icon: 'status', text: `${ctx.name(event.ref)} acorda`, tone: 'status' }
+    case 'CLEANSE':
+      return event.status
+        ? { icon: 'heal', text: `${ctx.name(event.targetRef)} perde ${statusLabels[event.status]}`, tone: 'heal' }
+        : { icon: 'heal', text: `${ctx.name(event.targetRef)} não tinha o que tirar`, tone: 'muted' }
     case 'SKILL':
       return { icon: 'skill', text: `Usa ${ctx.skill(event.skillKey)}`, tone: sideTone(ctx, event.ref) }
     case 'DAMAGE':
       return {
         icon: 'damage',
-        text: `${ctx.name(event.targetRef)} sofre dano${event.shieldAbsorbed ? ` (${n(event.shieldAbsorbed)} no escudo)` : ''}`,
+        text: `${ctx.name(event.targetRef)} sofre dano${event.linked ? ' pelo elo' : ''}${event.shieldAbsorbed ? ` (${n(event.shieldAbsorbed)} no escudo)` : ''}`,
         value: `-${n(event.amount + event.shieldAbsorbed)}`,
         tone: 'damage',
       }
@@ -259,7 +265,17 @@ export function stepUnits(units: BattleUnit[], event: BattleEvent): { units: Bat
       floats.push({ ref: event.ref, text: event.name, tone: 'status' })
       break
     case 'SKIP':
-      floats.push({ ref: event.ref, text: 'Perdeu a vez', tone: 'status', big: true })
+      floats.push({ ref: event.ref, text: `${statusLabels[event.reason]}!`, tone: 'status', big: true })
+      break
+    case 'WOKE':
+      patch(event.ref, (u) => ({ statuses: u.statuses.filter((s) => s !== 'SLEEP') }))
+      floats.push({ ref: event.ref, text: 'Acordou!', tone: 'status', big: true })
+      break
+    case 'CLEANSE':
+      if (event.status) {
+        patch(event.targetRef, (u) => ({ statuses: u.statuses.filter((s) => s !== event.status) }))
+        floats.push({ ref: event.targetRef, text: 'Purificado!', tone: 'heal', big: true })
+      }
       break
     case 'DEFEATED':
       patch(event.ref, () => ({ alive: false, hp: 0 }))
@@ -274,9 +290,13 @@ export function stepUnits(units: BattleUnit[], event: BattleEvent): { units: Bat
 export function stepDelay(event: BattleEvent): number {
   switch (event.type) {
     case 'TURN':
-      return 260
+      // a vez chega na unidade (destaque) antes de ela agir
+      return 550
     case 'SKILL':
-      return 750
+      return 900
+    case 'SKIP':
+      // o aviso de atordoado fica na tela antes da próxima vez
+      return 1500
     case 'DAMAGE':
     case 'HEAL':
     case 'SHIELD':
@@ -291,4 +311,29 @@ export function stepDelay(event: BattleEvent): number {
     default:
       return 260
   }
+}
+
+/**
+ * Unidades do começo da batalha, para reproduzir a abertura quando a máquina age antes da primeira vez do jogador
+ * (o estado já chega com essas vezes resolvidas). Nulo quando não há o que reproduzir: o jogador já agiu ou ninguém da
+ * máquina agiu ainda. Volta todos à vida cheia, sem escudo nem status; a posição fica a atual (o MOVE não diz de onde saiu).
+ */
+export function openingUnits(state: BattleState): BattleUnit[] | null {
+  const sides = new Map(state.battle.units.map((u) => [u.ref, u.side]))
+  const isPlayer = (ref: string) => sides.get(ref) === 'PLAYER'
+  const playerActed = state.events.some(
+    (e) => ((e.type === 'SKILL' || e.type === 'DEFEND') && isPlayer(e.ref)) || (e.type === 'MOVE' && !e.forced && isPlayer(e.ref)),
+  )
+  const opponentTurn = state.events.some((e) => e.type === 'TURN' && !isPlayer(e.ref))
+  if (playerActed || !opponentTurn) return null
+  return state.battle.units.map((u) => ({
+    ...u,
+    hp: u.maxHp,
+    shield: 0,
+    alive: true,
+    statuses: [],
+    tauntedBy: null,
+    protectedBy: null,
+    engaged: false,
+  }))
 }

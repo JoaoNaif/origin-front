@@ -38,10 +38,13 @@ Fontes gratuitas (OFL): Barlow Condensed (`font-display`, títulos e botões), I
   - `lobby-batalha.jpg`: slide Batalha do lobby.
   - `lobby-mascarado.jpg`: guerreiro mascarado, slide Esquadrões do lobby.
   - `lobby-ecko.jpg`: Ecko, topo de Esquadrões (`SQUADS_ART` em `squads-page.tsx`).
-  - `banner-sunna.jpg`: Sunna, slide Personagens e topo de Personagens (`CHARACTERS_ART` em `characters-page.tsx`).
-  - Topo das páginas do hub com arte: `PageBanner` (`src/components/layout/page-banner.tsx`), com `artPosition`
-    para ajustar o enquadramento de cada arte.
-  - A cabeça dos personagens fica no alto da arte: usar `object-[right_top]` para o rosto não ser cortado.
+  - `banner-sunna.jpg`: Sunna, topo de Personagens (`CHARACTERS_ART` em `characters-page.tsx`).
+  - `banner-explosao.jpg`: topo de Batalhar (`PLAY_ART` em `play-page.tsx`).
+  - `banner-adagas.jpg`: topo de Histórico (`HISTORY_ART` em `history-page.tsx`).
+  - `banner-lanca.jpg`: slide Personagens do lobby e topo de Minha conta (`ACCOUNT_ART` em `account-page.tsx`).
+  - Topo das páginas do hub com arte: `PageBanner` (`src/components/layout/page-banner.tsx`). A arte aparece **inteira**,
+    sem recorte (`BannerArt`: altura do banner, largura na proporção, colada à direita, borda esquerda sumindo no fundo);
+    o lobby usa o mesmo `BannerArt`.
 - Personagens: `public/characters/<templateKey>.png` (o `templateKey` de `GET /templates`, dos personagens e das
   unidades da batalha). PNG quadrado, corpo inteiro, fundo transparente, **virado para a direita**, cabeça no alto e pés
   na base. Direção de arte em `../origin-game/docs/art_direction.md`. Helper e escala por personagem em
@@ -57,6 +60,14 @@ Fontes gratuitas (OFL): Barlow Condensed (`font-display`, títulos e botões), I
   `text-gradient-silver`, `text-gradient-primary`. Brilho: `shadow-glow`, `shadow-glow-danger`.
 - Botão: `src/components/ui/button.tsx` (primary, secondary, ghost, danger; sm, md, lg). Em `<Link>`, usar
   `buttonClasses()` de `button-classes.ts`.
+
+## Explicações para o jogador
+
+Texto único em `src/features/game/glossary.ts` (atributos, status, termos da batalha; etiquetas de status). Três níveis,
+do mais leve ao completo: **`Term`** (`src/components/ui/term.tsx`: o próprio rótulo com sublinhado pontilhado e balão no
+mouse/modal no toque, sem ícone extra; não usar dentro de link, lá vai `title`), o **painel da unidade** na batalha
+(status com efeito e observação) e a página **Guia** (`/guia`, `guide-page.tsx`, com âncoras `#atributos`, `#status`,
+`#classes`, `#batalha`). Termo novo do jogo: escrever no glossário e mostrar nesses lugares.
 
 ## Navegação
 
@@ -112,6 +123,9 @@ Rotas em `src/features/admin/admin-api.ts`. Duas abas (`?aba=`):
 - O `options[].payload` de `GET /battles/:id/options` já é o corpo da jogada: o front mostra as opções e envia a escolhida.
 - Os `events` de `POST /battles/:id/actions` **repetem o começo da vez** (do último `TURN` em diante, que já estava no
   registro). Juntar com `newEvents()` (`src/features/battle/battle-events.ts`); conferido contra `GET /battles/:id`.
+- `POST /battles` já vem com as vezes da máquina que agiram antes do jogador: a tela reproduz essa abertura a partir
+  de todos com vida cheia (`openingUnits()` em `battle-events.ts`). Cada skill e cada Atordoado sobem uma faixa no topo
+  do campo (`CastBanner` em `battle-page.tsx`), com o que a skill fez em quem.
 - Na batalha, o alvo da opção (`payload.target`) é uma célula, mas quem é atingido vem em `preview.hits`: a tela marca
   o primeiro atingido como lugar do clique. O HP pode vir fracionado (Desgaste): exibir com `displayHp()`.
 - A API é chamada **direto** em `VITE_API_URL` (sem proxy do Vite): o cookie de refresh tem `path=/sessions`, e um

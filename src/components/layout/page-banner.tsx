@@ -4,8 +4,6 @@ import { cn } from '@/lib/cn'
 type PageBannerProps = {
   /** Arte em public/art (16:9, personagem à direita). Sem o arquivo, fica só o fundo. */
   art: string
-  /** object-position da arte: depende de onde está o rosto (ex.: `object-[right_top]`). */
-  artPosition?: string
   /** Palavra gigante vazada no fundo. */
   outlineWord: string
   /** Linha acima do título (badge + texto em mono). */
@@ -14,34 +12,28 @@ type PageBannerProps = {
   description: ReactNode
 }
 
-/** Topo das páginas do hub: arte à direita, título enorme à esquerda. */
-export function PageBanner({ art, artPosition = 'object-[right_top]', outlineWord, meta, title, description }: PageBannerProps) {
+/**
+ * Topo das páginas do hub: arte à direita, título enorme à esquerda. A arte aparece inteira (altura do banner, largura
+ * na proporção dela, colada à direita); em tela estreita sobra para a esquerda, que é a parte vazia da arte.
+ */
+export function PageBanner({ art, outlineWord, meta, title, description }: PageBannerProps) {
   const [artLoaded, setArtLoaded] = useState(false)
 
   return (
-    <section className="relative isolate overflow-hidden border-b border-line">
+    <section className="relative isolate flex min-h-104 items-center overflow-hidden border-b border-line lg:min-h-128 2xl:min-h-144">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-bg">
-        <img
-          src={art}
-          alt=""
-          onLoad={() => setArtLoaded(true)}
-          onError={(e) => (e.currentTarget.hidden = true)}
-          className={cn(
-            'absolute inset-y-0 right-0 h-full w-full object-cover transition-opacity duration-700 ease-out-soft lg:w-3/4',
-            artPosition,
-            artLoaded ? 'opacity-100' : 'opacity-0',
-          )}
-        />
+        <BannerArt src={art} loaded={artLoaded} onLoad={() => setArtLoaded(true)} />
         {!artLoaded && <div className="absolute inset-0 bg-grid mask-[linear-gradient(to_bottom,black,transparent_85%)]" />}
-        <div className="absolute inset-0 bg-linear-to-r from-bg via-bg/70 via-45% to-transparent" />
-        <div className="absolute inset-0 bg-linear-to-t from-bg via-transparent to-transparent" />
+        {/* só o necessário para o texto ficar legível: a arte fica limpa da metade para a direita */}
+        <div className="absolute inset-0 bg-linear-to-r from-bg via-bg/60 via-30% to-transparent to-60%" />
+        <div className="absolute inset-0 bg-linear-to-t from-bg to-transparent to-20%" />
         <div className="absolute inset-0 scanlines" />
         <span className="absolute -bottom-8 -left-4 font-display text-[11rem] leading-none font-extrabold uppercase italic text-outline select-none">
           {outlineWord}
         </span>
       </div>
 
-      <div className="mx-auto max-w-7xl px-6 pt-12 pb-12 lg:px-10 lg:pt-16">
+      <div className="mx-auto w-full max-w-7xl px-6 py-12 lg:px-10">
         <div className="flex flex-wrap items-center gap-3">{meta}</div>
         <h1 className="mt-5 font-display text-6xl leading-[0.85] font-extrabold uppercase italic text-silver-bright sm:text-7xl xl:text-8xl">
           {title}
@@ -49,6 +41,19 @@ export function PageBanner({ art, artPosition = 'object-[right_top]', outlineWor
         <p className="mt-5 max-w-md text-[15px] leading-relaxed text-fg-muted">{description}</p>
       </div>
     </section>
+  )
+}
+
+/**
+ * Arte 16:9 inteira, sem recorte: altura do pai, largura na proporção, colada à direita. A borda esquerda some no fundo
+ * (a arte pode ser mais estreita que o banner).
+ */
+export function BannerArt({ src, loaded, onLoad, className }: { src: string; loaded: boolean; onLoad: () => void; className?: string }) {
+  return (
+    <div className={cn('absolute inset-y-0 right-0 transition-opacity duration-700 ease-out-soft', loaded ? 'opacity-100' : 'opacity-0', className)}>
+      <img src={src} alt="" onLoad={onLoad} onError={(e) => (e.currentTarget.hidden = true)} className="block h-full w-auto max-w-none" />
+      <div className="absolute inset-y-0 left-0 w-1/3 bg-linear-to-r from-bg to-transparent" />
+    </div>
   )
 }
 

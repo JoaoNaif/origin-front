@@ -70,7 +70,7 @@ export type SkillRange = 'MELEE' | 'RANGED' | 'PIERCING' | 'FLANK'
 export type SkillArea = 'SINGLE' | 'LINE' | 'COLUMN' | 'GRID'
 export type SkillTarget = 'ENEMY' | 'ALLY' | 'SELF'
 export type SkillKitSlot = 'BASIC' | 'STANDARD' | 'ROLE' | 'SIGNATURE'
-export type StatusType = 'STUN' | 'LOCK' | 'ROOT' | 'EXPOSE' | 'MARK' | 'DOT' | 'TAUNT'
+export type StatusType = 'STUN' | 'LOCK' | 'ROOT' | 'EXPOSE' | 'MARK' | 'DOT' | 'TAUNT' | 'SILENCE' | 'SLEEP' | 'LINK' | 'STEALTH' | 'CONTAGION'
 
 /** Efeito de skill (`src/domain/skills/value-objects/skill-effect.ts` no backend). */
 export type SkillEffect = { appliesTo?: 'TARGET' | 'SELF' } & (
@@ -80,7 +80,7 @@ export type SkillEffect = { appliesTo?: 'TARGET' | 'SELF' } & (
   | { type: 'REPOSITION'; kind: 'PUSH' | 'PULL' | 'SWAP' | 'MOVE_ALLY' | 'DASH' }
   | { type: 'TURN_SHIFT'; percent: number }
   | { type: 'CHANGE_FIELD'; duration: number; multiplier: number }
-  | { type: 'RECOVER' | 'PROTECT' }
+  | { type: 'RECOVER' | 'PROTECT' | 'CLEANSE' }
   | { type: 'GRANT_TURN'; attackPercent?: number }
   | { type: 'EXPLOIT'; status: StatusType; multiplier: number; consume: boolean }
 )

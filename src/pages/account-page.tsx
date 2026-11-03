@@ -4,7 +4,8 @@ import { AtSign, Check, KeyRound, Loader2, Lock, LogOut, ShieldCheck, UserRound 
 import { useForm } from 'react-hook-form'
 import { Link } from 'react-router-dom'
 import { z } from 'zod'
-import { Page, PageHeader, SectionTitle } from '@/components/layout/page'
+import { Page, SectionTitle } from '@/components/layout/page'
+import { BannerMeta, PageBanner } from '@/components/layout/page-banner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input, PasswordInput } from '@/components/ui/input'
@@ -16,6 +17,9 @@ import { apiErrorMessage, httpStatus } from '@/lib/api'
 import { cn } from '@/lib/cn'
 
 // Minha conta (PATCH /me): nome exibido e senha. O username e o papel não mudam pela API.
+
+/** Arte do topo (public/art). Sem o arquivo, fica só o fundo. */
+const ACCOUNT_ART = '/art/banner-lanca.jpg'
 
 // Mesmas regras do backend: nome 2 a 30, senha 8 a 72
 const profileSchema = z.object({
@@ -45,33 +49,53 @@ export function AccountPage() {
   const { data: account } = useMe()
 
   return (
-    <Page>
-      <PageHeader eyebrow="Conta" title="Minha conta" description="Seu perfil, sua senha e seu registro de combate." />
+    <div className="pb-12">
+      <PageBanner
+        art={ACCOUNT_ART}
+        outlineWord="Perfil"
+        meta={
+          <>
+            <Badge tone="primary">
+              <UserRound className="size-3" />
+              Conta
+            </Badge>
+            {account && <BannerMeta>@{account.username}</BannerMeta>}
+          </>
+        }
+        title={
+          <>
+            Minha <span className="text-gradient-primary pr-3">conta</span>
+          </>
+        }
+        description="Seu perfil, sua senha e seu registro de combate."
+      />
 
-      {/* O AppShell só aparece com a conta carregada (RequireAuth) */}
-      {account && (
-        <>
-          <Identity account={account} />
+      <Page className="pt-10 lg:pt-10">
+        {/* O AppShell só aparece com a conta carregada (RequireAuth) */}
+        {account && (
+          <>
+            <Identity account={account} />
 
-          <div className="grid gap-8 lg:grid-cols-2">
+            <div className="grid gap-8 lg:grid-cols-2">
+              <section className="space-y-5">
+                <SectionTitle index="01">Perfil</SectionTitle>
+                <ProfileSection account={account} />
+              </section>
+
+              <section className="space-y-5">
+                <SectionTitle index="02">Senha</SectionTitle>
+                <PasswordSection username={account.username} />
+              </section>
+            </div>
+
             <section className="space-y-5">
-              <SectionTitle index="01">Perfil</SectionTitle>
-              <ProfileSection account={account} />
+              <SectionTitle index="03">Sessão</SectionTitle>
+              <SessionSection />
             </section>
-
-            <section className="space-y-5">
-              <SectionTitle index="02">Senha</SectionTitle>
-              <PasswordSection username={account.username} />
-            </section>
-          </div>
-
-          <section className="space-y-5">
-            <SectionTitle index="03">Sessão</SectionTitle>
-            <SessionSection />
-          </section>
-        </>
-      )}
-    </Page>
+          </>
+        )}
+      </Page>
+    </div>
   )
 }
 

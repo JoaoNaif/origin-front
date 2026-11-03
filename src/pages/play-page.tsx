@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { AlertTriangle, ChevronRight, Mountain, Play, Swords } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Page, PageHeader, SectionTitle } from '@/components/layout/page'
+import { Page, SectionTitle } from '@/components/layout/page'
+import { BannerMeta, PageBanner } from '@/components/layout/page-banner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { buttonClasses } from '@/components/ui/button-classes'
@@ -19,8 +20,13 @@ import {
   type Squad,
 } from '@/features/game/game-api'
 import { profileLabels, statLabels } from '@/features/game/game-labels'
+import { statInfo } from '@/features/game/glossary'
+import { Term } from '@/components/ui/term'
 import { apiErrorMessage, httpStatus } from '@/lib/api'
 import { cn } from '@/lib/cn'
+
+/** Arte do topo (public/art). Sem o arquivo, fica só o fundo. */
+const PLAY_ART = '/art/banner-explosao.jpg'
 
 const difficultyOrder: AiDifficulty[] = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'MASTER', 'GRANDMASTER']
 
@@ -64,119 +70,140 @@ export function PlayPage() {
     : null
 
   return (
-    <Page>
-      <PageHeader eyebrow="Contra a máquina" title="Batalhar" description="Escolha o adversário, veja o campo sorteado e entre com o esquadrão certo." />
-
-      {inProgress && (
-        <Link
-          to={`/batalha/${inProgress.id}`}
-          className="focus-ring chamfer group flex items-center gap-4 p-4 [--chamfer-bg:rgb(59_40_10/0.85)] [--chamfer-border:rgb(245_165_36/0.45)] [--cut:14px] hover:[--chamfer-border:rgb(245_165_36/0.8)]"
-        >
-          <span className="flex size-10 shrink-0 items-center justify-center border border-warning/40 text-warning">
-            <Play className="size-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-warning">Batalha em andamento</p>
-            <p className="truncate font-display text-xl font-bold uppercase tracking-wide text-fg">vs {inProgress.opponent.name}</p>
-          </div>
-          <span className="font-display text-sm font-bold uppercase tracking-[0.12em] text-warning">Retomar</span>
-          <ChevronRight className="size-4 text-warning transition-transform group-hover:translate-x-0.5" />
-        </Link>
-      )}
-
-      {/* 01 Adversário */}
-      <section className="space-y-5">
-        <SectionTitle index="01">Adversário</SectionTitle>
-        {npcSquads.isPending ? (
-          <div className="h-64 animate-pulse bg-raised" />
-        ) : npcSquads.isError ? (
-          <p className="text-sm text-danger">Não foi possível carregar os adversários.</p>
-        ) : (
-          <div className="space-y-5">
-            {difficultyOrder.map((difficulty, i) => {
-              const squads = npcSquads.data.filter((n) => n.difficulty === difficulty)
-              if (!squads.length) return null
-              return (
-                <div key={difficulty} className="grid gap-3 lg:grid-cols-[10rem_1fr]">
-                  <div className="flex items-center gap-3 lg:flex-col lg:items-start lg:gap-1">
-                    <span className="flex gap-0.5" aria-hidden>
-                      {difficultyOrder.map((_, j) => (
-                        <span key={j} className={cn('h-3 w-1 -skew-x-12', j <= i ? 'bg-danger-hover' : 'bg-overlay')} />
-                      ))}
-                    </span>
-                    <p className="font-display text-lg font-bold uppercase tracking-wide text-fg">{difficultyLabels[difficulty]}</p>
-                    <p className="font-mono text-[10px] text-fg-subtle">LV {Math.max(...squads.map((s) => s.level))}</p>
-                  </div>
-                  <ul className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                    {squads.map((npc) => {
-                      const active = createDraft.variables === npc.key && !createDraft.isError
-                      return (
-                        <li key={npc.key}>
-                          <button
-                            type="button"
-                            onClick={() => chooseOpponent(npc)}
-                            disabled={createDraft.isPending}
-                            aria-pressed={active}
-                            className={cn(
-                              'focus-ring chamfer flex h-20 w-full flex-col justify-between p-3 text-left [--cut:10px] transition-all duration-150 ease-out-soft',
-                              active
-                                ? '[--chamfer-bg:rgb(59_21_23/0.9)] [--chamfer-border:var(--color-danger-hover)] drop-shadow-[0_0_14px_rgb(229_72_77/0.35)]'
-                                : '[--chamfer-bg:var(--color-surface)] [--chamfer-border:var(--color-line)] hover:[--chamfer-border:rgb(229_72_77/0.5)]',
-                              'disabled:opacity-60',
-                            )}
-                          >
-                            <span className="flex items-center justify-between gap-2">
-                              <span className="truncate font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
-                                {profileLabels[npc.profile]}
-                              </span>
-                              <span className="shrink-0 font-mono text-[10px] text-fg-muted">LV {npc.level}</span>
-                            </span>
-                            <span className="truncate font-display text-lg leading-none font-bold uppercase tracking-wide text-fg">{npc.name}</span>
-                          </button>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </div>
-              )
-            })}
-            {createDraft.isError && <p className="text-sm text-danger">{apiErrorMessage(createDraft.error)}</p>}
-          </div>
-        )}
-      </section>
-
-      {/* Campo + Esquadrão: modal depois do sorteio */}
-      <Dialog
-        open={createDraft.isPending || !!draft}
-        onClose={closeDraft}
-        eyebrow={draft ? `${difficultyLabels[draft.opponent.difficulty]} · ${profileLabels[draft.opponent.profile]}` : 'Sorteando o campo...'}
-        title={draft ? `vs ${draft.opponent.name}` : 'Pré-batalha'}
-        footer={
-          draft && (
-            <div className="flex flex-wrap items-center justify-end gap-3">
-              {startError && <p className="mr-auto text-sm text-danger">{startError}</p>}
-              <p className="font-mono text-[11px] text-fg-subtle">A pré-batalha vale 30 minutos.</p>
-              <Button size="lg" onClick={begin} disabled={!squadId || start.isPending}>
-                <Swords className="size-5" />
-                {start.isPending ? 'Entrando...' : `Enfrentar ${draft.opponent.name}`}
-              </Button>
-            </div>
-          )
-        }
-      >
-        {draft && !createDraft.isPending ? (
+    <div className="pb-12">
+      <PageBanner
+        art={PLAY_ART}
+        outlineWord="Combate"
+        meta={
           <>
-            <FieldSection draft={draft} />
-            <SquadSection draft={draft} squadId={squadId} onSelect={setSquadId} />
+            <Badge tone="primary">
+              <Swords className="size-3" />
+              Contra a máquina
+            </Badge>
+            <BannerMeta>PvE · campo sorteado</BannerMeta>
           </>
-        ) : (
-          <div className="space-y-4">
-            <div className="h-24 animate-pulse bg-raised" />
-            <div className="h-40 animate-pulse bg-raised" />
-          </div>
+        }
+        title={
+          <>
+            Bata
+            <span className="text-gradient-primary pr-3">lhar</span>
+          </>
+        }
+        description="Escolha o adversário, veja o campo sorteado e entre com o esquadrão certo."
+      />
+
+      <Page className="pt-10 lg:pt-10">
+        {inProgress && (
+          <Link
+            to={`/batalha/${inProgress.id}`}
+            className="focus-ring chamfer group flex items-center gap-4 p-4 [--chamfer-bg:rgb(59_40_10/0.85)] [--chamfer-border:rgb(245_165_36/0.45)] [--cut:14px] hover:[--chamfer-border:rgb(245_165_36/0.8)]"
+          >
+            <span className="flex size-10 shrink-0 items-center justify-center border border-warning/40 text-warning">
+              <Play className="size-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-warning">Batalha em andamento</p>
+              <p className="truncate font-display text-xl font-bold uppercase tracking-wide text-fg">vs {inProgress.opponent.name}</p>
+            </div>
+            <span className="font-display text-sm font-bold uppercase tracking-[0.12em] text-warning">Retomar</span>
+            <ChevronRight className="size-4 text-warning transition-transform group-hover:translate-x-0.5" />
+          </Link>
         )}
-      </Dialog>
-    </Page>
+
+        {/* 01 Adversário */}
+        <section className="space-y-5">
+          <SectionTitle index="01">Adversário</SectionTitle>
+          {npcSquads.isPending ? (
+            <div className="h-64 animate-pulse bg-raised" />
+          ) : npcSquads.isError ? (
+            <p className="text-sm text-danger">Não foi possível carregar os adversários.</p>
+          ) : (
+            <div className="space-y-5">
+              {difficultyOrder.map((difficulty, i) => {
+                const squads = npcSquads.data.filter((n) => n.difficulty === difficulty)
+                if (!squads.length) return null
+                return (
+                  <div key={difficulty} className="grid gap-3 lg:grid-cols-[10rem_1fr]">
+                    <div className="flex items-center gap-3 lg:flex-col lg:items-start lg:gap-1">
+                      <span className="flex gap-0.5" aria-hidden>
+                        {difficultyOrder.map((_, j) => (
+                          <span key={j} className={cn('h-3 w-1 -skew-x-12', j <= i ? 'bg-danger-hover' : 'bg-overlay')} />
+                        ))}
+                      </span>
+                      <p className="font-display text-lg font-bold uppercase tracking-wide text-fg">{difficultyLabels[difficulty]}</p>
+                      <p className="font-mono text-[10px] text-fg-subtle">LV {Math.max(...squads.map((s) => s.level))}</p>
+                    </div>
+                    <ul className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                      {squads.map((npc) => {
+                        const active = createDraft.variables === npc.key && !createDraft.isError
+                        return (
+                          <li key={npc.key}>
+                            <button
+                              type="button"
+                              onClick={() => chooseOpponent(npc)}
+                              disabled={createDraft.isPending}
+                              aria-pressed={active}
+                              className={cn(
+                                'focus-ring chamfer flex h-20 w-full flex-col justify-between p-3 text-left [--cut:10px] transition-all duration-150 ease-out-soft',
+                                active
+                                  ? '[--chamfer-bg:rgb(59_21_23/0.9)] [--chamfer-border:var(--color-danger-hover)] drop-shadow-[0_0_14px_rgb(229_72_77/0.35)]'
+                                  : '[--chamfer-bg:var(--color-surface)] [--chamfer-border:var(--color-line)] hover:[--chamfer-border:rgb(229_72_77/0.5)]',
+                                'disabled:opacity-60',
+                              )}
+                            >
+                              <span className="flex items-center justify-between gap-2">
+                                <span className="truncate font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
+                                  {profileLabels[npc.profile]}
+                                </span>
+                                <span className="shrink-0 font-mono text-[10px] text-fg-muted">LV {npc.level}</span>
+                              </span>
+                              <span className="truncate font-display text-lg leading-none font-bold uppercase tracking-wide text-fg">{npc.name}</span>
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
+                )
+              })}
+              {createDraft.isError && <p className="text-sm text-danger">{apiErrorMessage(createDraft.error)}</p>}
+            </div>
+          )}
+        </section>
+
+        {/* Campo + Esquadrão: modal depois do sorteio */}
+        <Dialog
+          open={createDraft.isPending || !!draft}
+          onClose={closeDraft}
+          eyebrow={draft ? `${difficultyLabels[draft.opponent.difficulty]} · ${profileLabels[draft.opponent.profile]}` : 'Sorteando o campo...'}
+          title={draft ? `vs ${draft.opponent.name}` : 'Pré-batalha'}
+          footer={
+            draft && (
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                {startError && <p className="mr-auto text-sm text-danger">{startError}</p>}
+                <p className="font-mono text-[11px] text-fg-subtle">A pré-batalha vale 30 minutos.</p>
+                <Button size="lg" onClick={begin} disabled={!squadId || start.isPending}>
+                  <Swords className="size-5" />
+                  {start.isPending ? 'Entrando...' : `Enfrentar ${draft.opponent.name}`}
+                </Button>
+              </div>
+            )
+          }
+        >
+          {draft && !createDraft.isPending ? (
+            <>
+              <FieldSection draft={draft} />
+              <SquadSection draft={draft} squadId={squadId} onSelect={setSquadId} />
+            </>
+          ) : (
+            <div className="space-y-4">
+              <div className="h-24 animate-pulse bg-raised" />
+              <div className="h-40 animate-pulse bg-raised" />
+            </div>
+          )}
+        </Dialog>
+      </Page>
+    </div>
   )
 }
 
@@ -197,7 +224,14 @@ function FieldSection({ draft }: { draft: BattleDraft }) {
             <div className="min-w-0">
               <p className="font-display text-3xl leading-none font-extrabold uppercase italic text-silver-bright">{field.name}</p>
               <p className="mt-1 font-mono text-xs text-fg-muted">
-                +{field.primaryPercent}% {statLabels[field.primaryStat]} · +{field.secondaryPercent}% {statLabels[field.secondaryStat]}
+                +{field.primaryPercent}%{' '}
+                <Term title={statLabels[field.primaryStat]} info={statInfo[field.primaryStat]}>
+                  {statLabels[field.primaryStat]}
+                </Term>{' '}
+                · +{field.secondaryPercent}%{' '}
+                <Term title={statLabels[field.secondaryStat]} info={statInfo[field.secondaryStat]}>
+                  {statLabels[field.secondaryStat]}
+                </Term>
               </p>
             </div>
             <div className="min-w-0 flex-1">

@@ -33,6 +33,7 @@ import { displayHp, toneText, type LogIcon, type LogTurn } from '@/features/batt
 import { classIcons } from '@/features/game/class-icons'
 import { difficultyLabels, type Stat } from '@/features/game/game-api'
 import { endReasonLabels, profileLabels, statLabels, statShort } from '@/features/game/game-labels'
+import { statInfo } from '@/features/game/glossary'
 import { CharacterPortrait } from '@/features/game/character-art'
 import { cn } from '@/lib/cn'
 
@@ -105,7 +106,7 @@ export function TopBar({ battle, units, playerName, onForfeit, forfeiting, onTog
                 [field.primaryPercent, field.primaryStat],
                 [field.secondaryPercent, field.secondaryStat],
               ].map(([percent, stat]) => (
-                <span key={stat} className="border border-warning/40 px-1 py-px font-mono text-[10px] font-bold text-warning" title={statLabels[stat as Stat]}>
+                <span key={stat} className="border border-warning/40 px-1 py-px font-mono text-[10px] font-bold text-warning" title={`${statLabels[stat as Stat]}: ${statInfo[stat as Stat]}`}>
                   +{percent}% {statShort[stat as Stat]}
                 </span>
               ))}
