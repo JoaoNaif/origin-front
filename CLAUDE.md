@@ -69,6 +69,14 @@ mouse/modal no toque, sem ícone extra; não usar dentro de link, lá vai `title
 (status com efeito e observação) e a página **Guia** (`/guia`, `guide-page.tsx`, com âncoras `#atributos`, `#status`,
 `#classes`, `#batalha`). Termo novo do jogo: escrever no glossário e mostrar nesses lugares.
 
+**Tutoriais das telas** (`src/features/tutorial/`): cada tela tem um passo a passo em modal, aberto pelo botão
+`TutorialButton` no topo dela (`tutorial` do `PageBanner`; no lobby, na ficha do personagem e na barra da batalha, direto).
+Conteúdo em `tutorials.tsx` (passos com `StepLayout` de `tutorial-kit.tsx`: frase, miniatura "Na tela" e pontos numerados;
+miniaturas em `tutorial-mocks.tsx`, só desenho, sem dado real). O `TutorialProvider` (dentro do `RequireAuth`) desenha o
+modal e, no primeiro acesso da conta neste navegador (`localStorage` `origin:tutorial-seen:<id>`), pergunta se a pessoa quer
+o **tour**: passa pelas telas de `tourOrder`, navegando até cada uma. O Guia lista todos e refaz o tour. Tela nova: um
+tutorial em `tutorials.tsx` e o botão no topo dela.
+
 ## Navegação
 
 Barra **lateral** (`src/components/layout/sidebar.tsx`), recolhível no desktop e em gaveta no mobile, dentro do
@@ -87,8 +95,9 @@ sem nova requisição. Os valores vêm da API (`GET /formation-bonuses`,
 `useFormationBonuses`, com cache como o resto do catálogo); sem resposta, a tela não mostra percentual. Só as condições
 (adjacência, fundo da linha, sem aliado ao lado, Vanguarda ancora) continuam espelhadas de `battle-engine.ts` em
 `src/features/squads/formation-bonus.ts`: **mudou a condição lá, muda aqui**. Quem aplica é o servidor.
-O ícone de ajuda sobre a grade abre o tutorial (`formation-tutorial.tsx`): um modal em passos com grades de exemplo que
-passam pelo mesmo cálculo, então nenhum número do tutorial é escrito à mão. Regra nova de formação: novo passo aqui.
+O ícone de ajuda sobre a grade abre o tutorial `formacao` (passos em `formation-tutorial.tsx`, lista em `tutorials.tsx`,
+que também fecha o tutorial de Esquadrões): grades de exemplo que passam pelo mesmo cálculo, então nenhum número do
+tutorial é escrito à mão. Regra nova de formação: novo passo aqui.
 
 ## Rodando
 
