@@ -2,6 +2,7 @@ import { Loader2, WifiOff } from 'lucide-react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useMe } from '@/features/auth/auth-api'
+import { TutorialProvider } from '@/features/tutorial/tutorial-provider'
 
 /** Só entra logado; sem sessão vai para o login e volta depois para onde estava. */
 export function RequireAuth() {
@@ -12,7 +13,11 @@ export function RequireAuth() {
   if (me.isError) return <ServerUnavailable onRetry={() => me.refetch()} retrying={me.isFetching} />
   if (!me.data) return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
 
-  return <Outlet />
+  return (
+    <TutorialProvider key={me.data.id} accountId={me.data.id}>
+      <Outlet />
+    </TutorialProvider>
+  )
 }
 
 /** Só para `role: ADMIN` (dentro do RequireAuth). Só esconde a tela: a proteção de verdade é o 403 do backend. */

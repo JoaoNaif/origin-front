@@ -89,6 +89,7 @@ function Banner({ count }: { count?: number }) {
   return (
     <PageBanner
       art={SQUADS_ART}
+      tutorial="esquadroes"
       outlineWord="Formação"
       meta={
         <>

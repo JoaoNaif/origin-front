@@ -1,7 +1,5 @@
-import { useState, type ReactNode } from 'react'
-import { ArrowLeft, ArrowRight, Check, ChevronsRight, CircleHelp, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Dialog } from '@/components/ui/dialog'
+import type { ReactNode } from 'react'
+import { Check, ChevronsRight, X } from 'lucide-react'
 import { classIcons } from '@/features/game/class-icons'
 import { classLabels, useFormationBonuses, type CharacterClass, type FormationBonusValues } from '@/features/game/game-api'
 import { BonusChips } from '@/features/squads/bonus-chips'
@@ -15,8 +13,8 @@ import {
 } from '@/features/squads/formation-bonus'
 import { cn } from '@/lib/cn'
 
-// Tutorial do bônus de formação. Os exemplos passam pelo mesmo cálculo da grade real, com os valores da API:
-// nenhum número daqui é escrito à mão.
+// Passos do tutorial do bônus de formação (tutorial "formacao" e fim do de Esquadrões, em tutorials.tsx). Os exemplos
+// passam pelo mesmo cálculo da grade real, com os valores da API: nenhum número daqui é escrito à mão.
 
 const at = (characterClass: CharacterClass, row: number, column: number): PlacedCharacter => ({
   character: { id: `${characterClass}-${row}-${column}`, name: classLabels[characterClass], characterClass },
@@ -287,100 +285,29 @@ function TradeoffStep({ values }: StepProps) {
   )
 }
 
-const steps = [
-  { title: 'A grade', Body: GridStep },
-  { title: 'Aura: vale para os vizinhos', Body: AuraStep },
-  { title: 'Auras iguais não somam', Body: StackingStep },
-  { title: 'O que cada classe dá', Body: ClassesStep },
-  { title: 'Executor: quer ficar sozinho', Body: ExecutorStep },
-  { title: 'Artilharia: quer ficar atrás', Body: ArtilleryStep },
-  { title: 'Agrupar ou espalhar', Body: TradeoffStep },
-]
-
-function TutorialStep({ index, values }: { index: number; values: FormationBonusValues }) {
-  const { title, Body } = steps[index]
-  return (
-    <section className="space-y-5">
-      <h3 className="font-display text-2xl leading-tight font-bold uppercase tracking-wide text-silver-bright">{title}</h3>
-      <Body values={values} />
-    </section>
-  )
+const bodies = {
+  grid: GridStep,
+  aura: AuraStep,
+  stacking: StackingStep,
+  classes: ClassesStep,
+  executor: ExecutorStep,
+  artillery: ArtilleryStep,
+  tradeoff: TradeoffStep,
 }
 
-/** Ícone de ajuda da montagem do esquadrão: abre o passo a passo do bônus de formação. */
-export function FormationTutorial() {
-  const [open, setOpen] = useState(false)
-  const [step, setStep] = useState(0)
+export type FormationStepKey = keyof typeof bodies
+
+/**
+ * Um passo do tutorial de formação (a lista e os títulos ficam em tutorials.tsx). Depende dos valores da API: sem eles,
+ * só o aviso, nenhum percentual inventado.
+ */
+export function FormationStep({ step }: { step: FormationStepKey }) {
   const values = useFormationBonuses()
-  const last = step === steps.length - 1
-
-  function close() {
-    setOpen(false)
-    setStep(0)
-  }
-
+  const Body = bodies[step]
+  if (!values.data) return <p className="text-sm text-fg-subtle">{bonusValuesMessage(values.isError)}</p>
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Como funciona a formação"
-        title="Como funciona a formação"
-        className="focus-ring flex size-6 items-center justify-center rounded-control text-fg-muted transition-colors hover:text-primary-soft"
-      >
-        <CircleHelp className="size-5" strokeWidth={1.75} />
-      </button>
-      <Dialog
-        open={open}
-        onClose={close}
-        eyebrow="Tutorial"
-        title="Como funciona a formação"
-        footer={
-          <div className="flex items-center justify-between gap-2">
-            <Button variant="ghost" size="sm" disabled={step === 0} onClick={() => setStep(step - 1)}>
-              <ArrowLeft className="size-4" />
-              Anterior
-            </Button>
-            <Button size="sm" onClick={() => (last ? close() : setStep(step + 1))}>
-              {last ? 'Entendi' : 'Próximo'}
-              {!last && <ArrowRight className="size-4" />}
-            </Button>
-          </div>
-        }
-      >
-        {open && (
-          <div className="min-h-104 space-y-6">
-            <ol className="flex flex-wrap gap-1.5">
-              {steps.map(({ title }, index) => (
-                <li key={title}>
-                  <button
-                    type="button"
-                    onClick={() => setStep(index)}
-                    aria-current={index === step ? 'step' : undefined}
-                    aria-label={`Passo ${index + 1}: ${title}`}
-                    title={title}
-                    className={cn(
-                      'focus-ring flex h-6 w-8 items-center justify-center rounded-control border font-mono text-[10px] tabular-nums transition-colors',
-                      index === step
-                        ? 'border-primary-soft bg-primary/25 text-silver-bright'
-                        : index < step
-                          ? 'border-primary-soft/40 text-primary-soft'
-                          : 'border-line text-fg-subtle hover:border-line-strong',
-                    )}
-                  >
-                    {String(index + 1).padStart(2, '0')}
-                  </button>
-                </li>
-              ))}
-            </ol>
-            {values.data ? (
-              <TutorialStep index={step} values={values.data} />
-            ) : (
-              <p className="text-sm text-fg-subtle">{bonusValuesMessage(values.isError)}</p>
-            )}
-          </div>
-        )}
-      </Dialog>
-    </>
+    <div className="space-y-6">
+      <Body values={values.data} />
+    </div>
   )
 }

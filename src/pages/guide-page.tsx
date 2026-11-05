@@ -1,15 +1,19 @@
 import { useEffect } from 'react'
-import { BookOpen } from 'lucide-react'
+import { BookOpen, ChevronRight, Compass } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { Page, PageHeader, SectionTitle } from '@/components/layout/page'
+import { Button } from '@/components/ui/button'
 import { classIcons } from '@/features/game/class-icons'
 import { classLabels, type CharacterClass, type StatusType } from '@/features/game/game-api'
 import { classAuras, statLabels, statOrder, statShort, statusLabels } from '@/features/game/game-labels'
 import { battleTerms, statInfo, statusDetails, statusShort, statusTone } from '@/features/game/glossary'
 import { statusEffects } from '@/features/game/skill-text'
+import { useTutorial } from '@/features/tutorial/tutorial-context'
+import { guideTutorials, tutorialIcons, tutorials } from '@/features/tutorial/tutorials'
 import { cn } from '@/lib/cn'
 
 const sections = [
+  { id: 'tutoriais', label: 'Tutoriais' },
   { id: 'atributos', label: 'Atributos' },
   { id: 'status', label: 'Status' },
   { id: 'classes', label: 'Classes' },
@@ -23,6 +27,7 @@ const classOrder = Object.keys(classAuras) as CharacterClass[]
 export function GuidePage() {
   // âncora vinda de outro lugar (ex.: "O que cada atributo faz" no personagem)
   const { hash } = useLocation()
+  const { open, startTour } = useTutorial()
   useEffect(() => {
     if (hash) document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [hash])
@@ -32,7 +37,13 @@ export function GuidePage() {
       <PageHeader
         eyebrow="Manual de campo"
         title="Guia"
-        description="Para que serve cada atributo, o que os status fazem e os termos que aparecem na batalha."
+        description="Como cada tela funciona, para que serve cada atributo, o que os status fazem e os termos da batalha."
+        actions={
+          <Button variant="secondary" onClick={startTour}>
+            <Compass className="size-4" />
+            Fazer o tour
+          </Button>
+        }
       />
 
       {/* atalhos para as seções */}
@@ -49,8 +60,45 @@ export function GuidePage() {
         ))}
       </nav>
 
+      <section id="tutoriais" className="scroll-mt-6 space-y-5">
+        <SectionTitle index="01">Tutoriais das telas</SectionTitle>
+        <p className="max-w-2xl text-sm text-fg-muted">
+          Cada tela tem o seu passo a passo, também aberto pelo botão <span className="text-fg">Tutorial</span> no topo dela. O tour passa
+          pelos principais em sequência.
+        </p>
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {guideTutorials.map((id) => {
+            const { title, summary, steps } = tutorials[id]
+            const Icon = tutorialIcons[id]
+            return (
+              <li key={id}>
+                <button
+                  type="button"
+                  onClick={() => open(id)}
+                  className="focus-ring chamfer group flex h-full w-full items-start gap-3 p-4 text-left [--chamfer-bg:var(--color-surface)] [--chamfer-border:var(--color-line)] [--cut:12px] transition-all hover:[--chamfer-border:rgb(167_139_250/0.6)]"
+                >
+                  <span className="flex size-9 shrink-0 items-center justify-center border border-line-strong text-primary-soft">
+                    <Icon className="size-4" />
+                  </span>
+                  <span className="min-w-0 flex-1 space-y-1">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="font-display text-lg leading-tight font-bold uppercase tracking-wide text-silver-bright">{title}</span>
+                      <span className="shrink-0 font-mono text-[10px] text-fg-subtle">
+                        {steps.length} {steps.length === 1 ? 'passo' : 'passos'}
+                      </span>
+                    </span>
+                    <span className="block text-sm leading-relaxed text-fg-muted">{summary}</span>
+                  </span>
+                  <ChevronRight className="size-4 shrink-0 self-center text-fg-subtle transition-transform group-hover:translate-x-0.5 group-hover:text-primary-soft" />
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+
       <section id="atributos" className="scroll-mt-6 space-y-5">
-        <SectionTitle index="01">Atributos</SectionTitle>
+        <SectionTitle index="02">Atributos</SectionTitle>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {statOrder.map((stat) => (
             <div key={stat} className="hud-corners flex gap-4 border border-line/60 bg-surface/60 p-4">
@@ -65,7 +113,7 @@ export function GuidePage() {
       </section>
 
       <section id="status" className="scroll-mt-6 space-y-5">
-        <SectionTitle index="02">Status</SectionTitle>
+        <SectionTitle index="03">Status</SectionTitle>
         <p className="max-w-2xl text-sm text-fg-muted">
           Efeitos que as skills deixam no alvo. A chance de pegar é a base abaixo, disputada entre a Precisão de quem usa e a
           Vontade de quem recebe. A duração conta nos turnos de quem recebe.
@@ -94,7 +142,7 @@ export function GuidePage() {
       </section>
 
       <section id="classes" className="scroll-mt-6 space-y-5">
-        <SectionTitle index="03">Classes e auras</SectionTitle>
+        <SectionTitle index="04">Classes e auras</SectionTitle>
         <p className="max-w-2xl text-sm text-fg-muted">
           Cada classe dá uma aura aos aliados vizinhos na grade (frente, trás e lados). Auras iguais não somam: a formação conta.
         </p>
@@ -115,7 +163,7 @@ export function GuidePage() {
       </section>
 
       <section id="batalha" className="scroll-mt-6 space-y-5">
-        <SectionTitle index="04">Termos da batalha</SectionTitle>
+        <SectionTitle index="05">Termos da batalha</SectionTitle>
         <dl className="grid gap-x-8 gap-y-4 md:grid-cols-2">
           {battleTerms.map((t) => (
             <div key={t.term} className="border-l-2 border-primary/50 pl-4">

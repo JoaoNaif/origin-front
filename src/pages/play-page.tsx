@@ -73,6 +73,7 @@ export function PlayPage() {
     <div className="pb-12">
       <PageBanner
         art={PLAY_ART}
+        tutorial="batalhar"
         outlineWord="Combate"
         meta={
           <>

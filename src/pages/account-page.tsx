@@ -52,6 +52,7 @@ export function AccountPage() {
     <div className="pb-12">
       <PageBanner
         art={ACCOUNT_ART}
+        tutorial="conta"
         outlineWord="Perfil"
         meta={
           <>

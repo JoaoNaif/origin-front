@@ -64,6 +64,7 @@ export function CharactersPage() {
     <div className="pb-12">
       <PageBanner
         art={CHARACTERS_ART}
+        tutorial="personagens"
         outlineWord="Elenco"
         meta={
           <>

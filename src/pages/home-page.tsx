@@ -18,6 +18,7 @@ import {
   type Character,
 } from '@/features/game/game-api'
 import { CharacterPortrait, PortraitPop } from '@/features/game/character-art'
+import { TutorialButton } from '@/features/tutorial/tutorial-button'
 import { cn } from '@/lib/cn'
 
 /** Um destaque do carrossel do lobby: a arte de fundo (public/art; sem o arquivo, a grade em perspectiva) e o texto. */
@@ -250,6 +251,8 @@ function LobbyHero({ slides }: { slides: Slide[] }) {
           if (Math.abs(delta) > 50) go(index + (delta < 0 ? 1 : -1))
         }}
       >
+        <TutorialButton id="lobby" className="absolute top-4 right-6 z-10 lg:top-6 lg:right-10" />
+
         {/* todos os slides na mesma célula: a altura é a do maior, nada pula ao trocar */}
         <div className="grid">
           {slides.map((slide, i) => {

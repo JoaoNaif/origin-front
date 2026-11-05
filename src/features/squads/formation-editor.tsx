@@ -30,7 +30,7 @@ import {
   type FormationBonus,
   type FormationReport,
 } from '@/features/squads/formation-bonus'
-import { FormationTutorial } from '@/features/squads/formation-tutorial'
+import { TutorialButton } from '@/features/tutorial/tutorial-button'
 import { cn } from '@/lib/cn'
 
 const SQUAD_SIZE = 4
@@ -162,7 +162,7 @@ export function FormationEditor({ squad, characters, onCreated }: {
                 </span>
               ))}
             </div>
-            <FormationTutorial />
+            <TutorialButton id="formacao" label="Como funciona a formação" iconOnly />
           </div>
           <div className="flex items-center gap-3">
             <div className="grid flex-1 grid-cols-3 gap-2.5" aria-label="Formação">

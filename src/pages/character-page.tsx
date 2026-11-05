@@ -18,6 +18,7 @@ import {
   type Template,
 } from '@/features/game/game-api'
 import { dangerLabels, lineageLabels } from '@/features/game/game-labels'
+import { TutorialButton } from '@/features/tutorial/tutorial-button'
 import { httpStatus } from '@/lib/api'
 
 export function CharacterPage() {
@@ -110,12 +111,15 @@ function Hero({ character, template }: { character: Character; template?: Templa
       </div>
 
       <div className="mx-auto max-w-7xl px-6 pt-8 pb-10 lg:px-10">
-        <Link
-          to="/personagens"
-          className="focus-ring group inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.15em] text-fg-subtle transition-colors hover:text-primary-soft"
-        >
-          <ArrowLeft className="size-3.5 transition-transform group-hover:-translate-x-0.5" /> Elenco
-        </Link>
+        <div className="flex items-center justify-between gap-4">
+          <Link
+            to="/personagens"
+            className="focus-ring group inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.15em] text-fg-subtle transition-colors hover:text-primary-soft"
+          >
+            <ArrowLeft className="size-3.5 transition-transform group-hover:-translate-x-0.5" /> Elenco
+          </Link>
+          <TutorialButton id="personagem" />
+        </div>
 
         <div className="mt-6 flex flex-wrap items-end justify-between gap-8">
           <div className="min-w-0 space-y-4">

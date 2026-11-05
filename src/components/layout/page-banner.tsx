@@ -1,4 +1,6 @@
 import { useState, type ReactNode } from 'react'
+import { TutorialButton } from '@/features/tutorial/tutorial-button'
+import type { TutorialId } from '@/features/tutorial/tutorial-context'
 import { cn } from '@/lib/cn'
 
 type PageBannerProps = {
@@ -10,13 +12,15 @@ type PageBannerProps = {
   meta: ReactNode
   title: ReactNode
   description: ReactNode
+  /** Tutorial da tela: o botão "Tutorial" ao lado do meta. */
+  tutorial?: TutorialId
 }
 
 /**
  * Topo das páginas do hub: arte à direita, título enorme à esquerda. A arte aparece inteira (altura do banner, largura
  * na proporção dela, colada à direita); em tela estreita sobra para a esquerda, que é a parte vazia da arte.
  */
-export function PageBanner({ art, outlineWord, meta, title, description }: PageBannerProps) {
+export function PageBanner({ art, outlineWord, meta, title, description, tutorial }: PageBannerProps) {
   const [artLoaded, setArtLoaded] = useState(false)
 
   return (
@@ -34,7 +38,10 @@ export function PageBanner({ art, outlineWord, meta, title, description }: PageB
       </div>
 
       <div className="mx-auto w-full max-w-7xl px-6 py-12 lg:px-10">
-        <div className="flex flex-wrap items-center gap-3">{meta}</div>
+        <div className="flex flex-wrap items-center gap-3">
+          {meta}
+          {tutorial && <TutorialButton id={tutorial} />}
+        </div>
         <h1 className="mt-5 font-display text-6xl leading-[0.85] font-extrabold uppercase italic text-silver-bright sm:text-7xl xl:text-8xl">
           {title}
         </h1>

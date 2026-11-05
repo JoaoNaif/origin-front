@@ -35,6 +35,7 @@ import { difficultyLabels, type Stat } from '@/features/game/game-api'
 import { endReasonLabels, profileLabels, statLabels, statShort } from '@/features/game/game-labels'
 import { statInfo } from '@/features/game/glossary'
 import { CharacterPortrait } from '@/features/game/character-art'
+import { TutorialButton } from '@/features/tutorial/tutorial-button'
 import { cn } from '@/lib/cn'
 
 const MAX_ROUNDS = 30
@@ -114,6 +115,7 @@ export function TopBar({ battle, units, playerName, onForfeit, forfeiting, onTog
           )}
         </div>
 
+        <TutorialButton id="batalha" label="Como funciona a batalha" iconOnly />
         <Button variant="ghost" size="sm" className="xl:hidden" onClick={onToggleLog} aria-label="Registro">
           <ScrollText className="size-3.5" />
           <span className="hidden sm:inline">Registro</span>

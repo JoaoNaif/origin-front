@@ -71,6 +71,7 @@ export function HistoryPage() {
     <div className="pb-12">
       <PageBanner
         art={HISTORY_ART}
+        tutorial="historico"
         outlineWord="Registro"
         meta={
           <>
