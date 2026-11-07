@@ -1,11 +1,12 @@
-import { useState } from 'react'
-import { Plus, RotateCcw, X } from 'lucide-react'
+import { useState, type CSSProperties } from 'react'
+import { Check, Plus, RotateCcw, Sparkles, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { SkillCard, TierPips } from '@/features/characters/skill-card'
 import { EnhancePanel } from '@/features/economy/enhance-panel'
 import { useEquipSkills, type Character, type SkillInfo } from '@/features/game/game-api'
-import { tierLabels } from '@/features/game/game-labels'
+import { kitSlotLabels, tierLabels } from '@/features/game/game-labels'
+import { skillKindStyle } from '@/features/game/skill-kinds'
 import { apiErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/cn'
 
@@ -21,7 +22,8 @@ function buildOf(character: Character): Slots {
 
 /**
  * Build: as 4 skills que o personagem leva para a batalha, escolhidas entre as aprendidas.
- * Clique numa skill aprendida para pôr no primeiro slot vazio; clique no slot para tirar.
+ * O "+" de uma aprendida põe no primeiro slot vazio; o "×" (no slot ou na lista) tira. Clicar mostra o detalhe.
+ * Cada skill leva a cor do papel principal dela (ataque, cura, defesa...).
  */
 export function BuildEditor({ character, catalog }: { character: Character; catalog: Map<string, SkillInfo> }) {
   const saved = buildOf(character)
@@ -33,6 +35,7 @@ export function BuildEditor({ character, catalog }: { character: Character; cata
   const complete = slots.every(Boolean)
   const learned = character.skills
   const focusedSkill = focused ? catalog.get(focused) : undefined
+  const nextEmpty = slots.indexOf(null)
 
   function toggle(key: string) {
     save.reset()
@@ -51,46 +54,98 @@ export function BuildEditor({ character, catalog }: { character: Character; cata
         {slots.map((key, i) => {
           const skill = key ? catalog.get(key) : undefined
           const name = skill?.name ?? learned.find((s) => s.key === key)?.name
+          const enhanced = !!learned.find((s) => s.key === key)?.isEnhanced
+          const kind = skill ? skillKindStyle(skill) : null
+          const KindIcon = kind?.icon
+          const isFocused = !!key && key === focused
           return (
-            <button
-              key={i}
-              type="button"
-              onClick={() => key && toggle(key)}
-              disabled={!key}
-              aria-label={key ? `Tirar ${name} do slot ${i + 1}` : `Slot ${i + 1} vazio`}
-              className={cn(
-                'focus-ring chamfer group relative flex h-28 flex-col justify-between p-3 text-left [--cut:12px]',
-                'transition-all duration-150 ease-out-soft',
-                key
-                  ? '[--chamfer-bg:rgb(34_26_61/0.7)] [--chamfer-border:rgb(139_92_246/0.5)] hover:[--chamfer-border:rgb(229_72_77/0.6)]'
-                  : '[--chamfer-bg:var(--color-surface)] [--chamfer-border:var(--color-line)]',
-              )}
-            >
-              <span className="flex items-center justify-between">
-                <span className="font-mono text-[10px] text-primary-soft">{String(i + 1).padStart(2, '0')}</span>
-                {key && <X className="size-3.5 text-fg-subtle opacity-0 transition-opacity group-hover:text-danger-hover group-hover:opacity-100" />}
-              </span>
-              {key ? (
-                <span className="space-y-1.5">
-                  {skill && <TierPips skill={skill} />}
-                  <span className="block font-display text-lg leading-tight font-bold uppercase tracking-wide text-silver-bright">
-                    {name}
+            <div key={i} className="group relative">
+              <button
+                type="button"
+                onClick={() => key && setFocused(key)}
+                disabled={!key}
+                aria-label={key ? `Slot ${i + 1}: ${name}` : `Slot ${i + 1} vazio`}
+                aria-pressed={isFocused}
+                style={{ '--tone': kind?.color ?? 'var(--color-primary-soft)' } as CSSProperties}
+                className={cn(
+                  'focus-ring chamfer relative flex h-36 w-full flex-col justify-between overflow-hidden p-3 text-left [--cut:14px]',
+                  'transition-all duration-200 ease-out-soft',
+                  key
+                    ? cn(
+                        '[--chamfer-bg:color-mix(in_srgb,var(--tone)_9%,var(--color-surface))]',
+                        isFocused
+                          ? '-translate-y-1 [--chamfer-border:var(--tone)] drop-shadow-[0_8px_18px_color-mix(in_srgb,var(--tone)_35%,transparent)]'
+                          : '[--chamfer-border:color-mix(in_srgb,var(--tone)_40%,transparent)] hover:-translate-y-1 hover:[--chamfer-border:color-mix(in_srgb,var(--tone)_80%,transparent)]',
+                      )
+                    : cn(
+                        '[--chamfer-bg:rgb(255_255_255/0.015)] [--chamfer-border:var(--color-line)] disabled:opacity-100',
+                        i === nextEmpty && '[--chamfer-border:rgb(167_139_250/0.45)]',
+                      ),
+                )}
+              >
+                {key && (
+                  <>
+                    <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_70%_at_100%_0%,color-mix(in_srgb,var(--tone)_20%,transparent),transparent)] opacity-60 transition-opacity duration-300 group-hover:opacity-100" />
+                    {KindIcon && (
+                      <KindIcon className="pointer-events-none absolute -right-3 -bottom-4 size-20 -rotate-12 text-(--tone) opacity-[0.06] transition-all duration-500 ease-out-soft group-hover:-rotate-3 group-hover:opacity-[0.14]" />
+                    )}
+                  </>
+                )}
+
+                <span className="relative flex items-center justify-between">
+                  <span className="font-mono text-[10px] text-primary-soft">{String(i + 1).padStart(2, '0')}</span>
+                  {skill?.kitSlot && <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-fg-subtle">{kitSlotLabels[skill.kitSlot]}</span>}
+                </span>
+
+                {key ? (
+                  <span className="relative space-y-2">
+                    {KindIcon && (
+                      <span className="relative flex size-9 items-center justify-center">
+                        <span className="absolute inset-1.5 rotate-45 border border-(--tone)/60 bg-(--tone)/15 shadow-[0_0_14px_-4px_var(--tone)] transition-transform duration-300 ease-out-soft group-hover:rotate-135" />
+                        <KindIcon className="relative size-4 text-(--tone)" />
+                      </span>
+                    )}
+                    <span className="flex items-center gap-2">
+                      {skill && <TierPips skill={skill} />}
+                      {enhanced && <Sparkles className="size-3 text-success" aria-label="Aprimorada" />}
+                    </span>
+                    <span className="block font-display text-lg leading-tight font-bold uppercase tracking-wide text-silver-bright">{name}</span>
                   </span>
-                </span>
-              ) : (
-                <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle">
-                  <Plus className="size-3" /> Vazio
-                </span>
+                ) : (
+                  <span className="relative flex flex-col items-center gap-1.5 self-center pb-4">
+                    <span
+                      className={cn(
+                        'flex size-9 items-center justify-center border border-dashed',
+                        i === nextEmpty ? 'border-primary-soft/60 text-primary-soft motion-safe:animate-pulse' : 'border-line-strong text-fg-subtle',
+                      )}
+                    >
+                      <Plus className="size-4" />
+                    </span>
+                    <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-fg-subtle">{i === nextEmpty ? 'Próximo' : 'Vazio'}</span>
+                  </span>
+                )}
+              </button>
+
+              {key && (
+                <button
+                  type="button"
+                  onClick={() => toggle(key)}
+                  aria-label={`Tirar ${name} da build`}
+                  title="Tirar da build"
+                  className="focus-ring absolute top-2 right-2 flex size-6 items-center justify-center border border-line-strong bg-bg/85 text-fg-subtle opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100 hover:border-danger/60 hover:bg-danger-dim hover:text-danger-hover focus-visible:opacity-100"
+                >
+                  <X className="size-3.5" />
+                </button>
               )}
-            </button>
+            </div>
           )
         })}
       </div>
 
       {(dirty || save.isError) && (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <p className={cn('mr-auto text-xs', save.isError ? 'text-danger' : 'text-fg-subtle')}>
-            {save.isError ? apiErrorMessage(save.error) : complete ? 'Build alterada.' : `Escolha mais ${slots.filter((k) => !k).length} para completar.`}
+        <div className="chamfer flex flex-wrap items-center justify-end gap-2 px-4 py-3 [--chamfer-bg:var(--color-surface)] [--chamfer-border:rgb(167_139_250/0.35)] [--cut:10px]">
+          <p className={cn('mr-auto text-xs', save.isError ? 'text-danger' : complete ? 'text-primary-soft' : 'text-fg-muted')}>
+            {save.isError ? apiErrorMessage(save.error) : complete ? 'Build alterada: salve para levar à batalha.' : `Escolha mais ${slots.filter((k) => !k).length} para completar.`}
           </p>
           <Button
             variant="ghost"
@@ -111,68 +166,109 @@ export function BuildEditor({ character, catalog }: { character: Character; cata
       )}
 
       {/* Aprendidas + detalhe da selecionada */}
-      <div className="grid gap-4 md:grid-cols-[minmax(0,14rem)_1fr]">
-        <ul className="space-y-1" aria-label="Skills aprendidas">
-          {learned.map((learnedSkill) => {
-            const skill = catalog.get(learnedSkill.key)
-            const slot = slots.indexOf(learnedSkill.key)
-            const isFocused = focused === learnedSkill.key
-            return (
-              <li key={learnedSkill.key} className="flex items-stretch gap-1">
-                <button
-                  type="button"
-                  onClick={() => setFocused(learnedSkill.key)}
-                  aria-pressed={isFocused}
-                  className={cn(
-                    'focus-ring flex min-w-0 flex-1 items-center gap-2.5 rounded-control border px-2.5 py-2 text-left transition-colors',
-                    isFocused ? 'border-line-strong bg-raised' : 'border-transparent hover:bg-white/[0.03]',
-                  )}
+      <div className="grid gap-4 md:grid-cols-[minmax(0,15rem)_1fr]">
+        <div className="space-y-2">
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">
+            <span className="text-primary-soft">//</span> Aprendidas
+          </p>
+          <ul className="space-y-1" aria-label="Skills aprendidas">
+            {learned.map((learnedSkill) => {
+              const skill = catalog.get(learnedSkill.key)
+              const slot = slots.indexOf(learnedSkill.key)
+              const isFocused = focused === learnedSkill.key
+              const kind = skill ? skillKindStyle(skill) : null
+              const KindIcon = kind?.icon
+              return (
+                <li
+                  key={learnedSkill.key}
+                  style={{ '--tone': kind?.color ?? 'var(--color-silver)' } as CSSProperties}
+                  className="group flex items-stretch gap-1"
                 >
-                  <span className={cn('h-6 w-0.75 shrink-0', slot >= 0 ? 'bg-primary' : 'bg-overlay')} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-fg">{learnedSkill.name}</span>
-                    <span className="block font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
-                      {skill ? tierLabels[skill.tier] : '—'}
-                      {learnedSkill.source === 'OFFER' && ' · bloco'}
+                  <button
+                    type="button"
+                    onClick={() => setFocused(learnedSkill.key)}
+                    aria-pressed={isFocused}
+                    className={cn(
+                      'focus-ring chamfer relative flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden px-2.5 py-2 text-left [--cut:8px] transition-all duration-200',
+                      isFocused
+                        ? '[--chamfer-bg:color-mix(in_srgb,var(--tone)_10%,var(--color-surface))] [--chamfer-border:color-mix(in_srgb,var(--tone)_55%,transparent)]'
+                        : '[--chamfer-bg:transparent] [--chamfer-border:transparent] hover:translate-x-0.5 hover:[--chamfer-bg:var(--color-surface)] hover:[--chamfer-border:var(--color-line)]',
+                    )}
+                  >
+                    <span className="relative flex size-7 shrink-0 items-center justify-center">
+                      <span
+                        className={cn(
+                          'absolute inset-1 rotate-45 border transition-all duration-300 ease-out-soft group-hover:rotate-135',
+                          slot >= 0 ? 'border-(--tone)/70 bg-(--tone)/15' : 'border-line-strong bg-bg/50',
+                        )}
+                      />
+                      {KindIcon && <KindIcon className={cn('relative size-3.5', slot >= 0 || isFocused ? 'text-(--tone)' : 'text-fg-subtle group-hover:text-(--tone)')} />}
                     </span>
-                  </span>
-                  {slot >= 0 && <span className="font-mono text-[10px] text-primary-soft">{String(slot + 1).padStart(2, '0')}</span>}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => toggle(learnedSkill.key)}
-                  disabled={slot < 0 && complete}
-                  aria-label={slot >= 0 ? `Tirar ${learnedSkill.name} da build` : `Pôr ${learnedSkill.name} na build`}
-                  title={slot >= 0 ? 'Tirar da build' : complete ? 'Build cheia: tire uma antes' : 'Pôr na build'}
-                  className="focus-ring flex w-8 shrink-0 items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-white/5 hover:text-primary-soft disabled:pointer-events-none disabled:opacity-40"
-                >
-                  {slot >= 0 ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
-                </button>
-              </li>
-            )
-          })}
-        </ul>
+                    <span className="min-w-0 flex-1">
+                      <span className={cn('block truncate text-sm font-medium transition-colors', isFocused ? 'text-silver-bright' : 'text-fg')}>{learnedSkill.name}</span>
+                      <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
+                        {skill ? tierLabels[skill.tier] : '—'}
+                        {learnedSkill.source === 'OFFER' && ' · bloco'}
+                        {learnedSkill.isEnhanced && <Sparkles className="size-2.5 text-success" aria-label="Aprimorada" />}
+                      </span>
+                    </span>
+                    {slot >= 0 && (
+                      <span className="flex h-5 min-w-5 items-center justify-center border border-(--tone)/50 font-mono text-[10px] text-(--tone)">{slot + 1}</span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggle(learnedSkill.key)}
+                    disabled={slot < 0 && complete}
+                    aria-label={slot >= 0 ? `Tirar ${learnedSkill.name} da build` : `Pôr ${learnedSkill.name} na build`}
+                    title={slot >= 0 ? 'Tirar da build' : complete ? 'Build cheia: tire uma antes' : 'Pôr na build'}
+                    className={cn(
+                      'focus-ring flex w-8 shrink-0 items-center justify-center border transition-all disabled:pointer-events-none disabled:opacity-30',
+                      slot >= 0
+                        ? 'border-transparent text-fg-subtle hover:border-danger/50 hover:bg-danger-dim hover:text-danger-hover'
+                        : 'border-line text-primary-soft hover:border-primary-soft/60 hover:bg-primary/15',
+                    )}
+                  >
+                    {slot >= 0 ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
 
-        <div className="hud-corners min-h-56 border border-line/60 bg-surface/60 p-5 [--hud-color:var(--color-primary-soft)]">
-          {focusedSkill ? (
-            <div className="space-y-4">
-              <SkillCard
-                skill={focusedSkill}
-                enhanced={learned.find((s) => s.key === focusedSkill.key)?.isEnhanced}
-                aside={slots.includes(focusedSkill.key) && <Badge tone="primary">Na build</Badge>}
-              />
-              {learned.some((s) => s.key === focusedSkill.key) && (
-                <EnhancePanel
-                  key={focusedSkill.key}
-                  characterId={character.id}
+        <div
+          style={{ '--tone': focusedSkill ? skillKindStyle(focusedSkill).color : 'var(--color-primary-soft)' } as CSSProperties}
+          className="chamfer relative min-h-56 overflow-hidden p-5 [--chamfer-bg:var(--color-surface)] [--chamfer-border:color-mix(in_srgb,var(--tone)_35%,var(--color-line))] [--cut:16px]"
+        >
+          <span className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-linear-to-b from-(--tone)/8 to-transparent" />
+          <div className="relative">
+            {focusedSkill ? (
+              <div key={focusedSkill.key} className="space-y-4 motion-safe:animate-fade-in">
+                <SkillCard
                   skill={focusedSkill}
-                  enhanced={!!learned.find((s) => s.key === focusedSkill.key)?.isEnhanced}
+                  enhanced={learned.find((s) => s.key === focusedSkill.key)?.isEnhanced}
+                  aside={
+                    slots.includes(focusedSkill.key) && (
+                      <Badge tone="primary">
+                        <Check className="size-3" /> Na build
+                      </Badge>
+                    )
+                  }
                 />
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-fg-muted">Selecione uma skill para ver os detalhes.</p>
-          )}
+                {learned.some((s) => s.key === focusedSkill.key) && (
+                  <EnhancePanel
+                    key={focusedSkill.key}
+                    characterId={character.id}
+                    skill={focusedSkill}
+                    enhanced={!!learned.find((s) => s.key === focusedSkill.key)?.isEnhanced}
+                  />
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-fg-muted">Selecione uma skill para ver os detalhes.</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

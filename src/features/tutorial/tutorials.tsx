@@ -400,7 +400,7 @@ export const tutorials: Record<TutorialId, Tutorial> = {
               </div>
             }
             points={[
-              { label: 'Slots', text: 'Clique num slot cheio para tirar a skill dele.' },
+              { label: 'Slots', text: 'Clique num slot para ver a skill; o X no canto tira ela da build.' },
               { label: 'Aprendidas', text: 'Tudo o que o personagem já sabe. Clique para ler os detalhes e use o botão ao lado para pôr na build.' },
               { label: 'Salvar', text: 'Com os 4 slots cheios, salve. Desfazer volta ao que estava salvo.' },
             ]}

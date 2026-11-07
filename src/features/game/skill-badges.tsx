@@ -1,36 +1,11 @@
-import {
-  ArrowDownCircle,
-  ArrowUpCircle,
-  Hourglass,
-  Mountain,
-  Move,
-  RefreshCcw,
-  Shield,
-  Sparkle,
-  Swords,
-  Zap,
-  type LucideIcon,
-} from 'lucide-react'
 import type { SkillInfo } from '@/features/game/game-api'
 import { rangeLabels } from '@/features/game/game-labels'
-import { skillKinds, type SkillKind } from '@/features/game/skill-text'
+import { kinds } from '@/features/game/skill-kinds'
+import { skillKinds } from '@/features/game/skill-text'
 import { cn } from '@/lib/cn'
 
 // Leitura rápida da skill: o papel (ícone e cor) e a área (desenho da grade). Cores pelos tokens:
 // ataque = perigo, cura = sucesso, defesa = info, buff = roxo, debuff e controle = alerta.
-
-const kinds: Record<SkillKind, { label: string; icon: LucideIcon; text: string; box: string }> = {
-  ATTACK: { label: 'Ataque', icon: Swords, text: 'text-danger-hover', box: 'border-danger/50 bg-danger-dim text-danger-hover' },
-  HEAL: { label: 'Cura', icon: Sparkle, text: 'text-success', box: 'border-success/40 bg-success/10 text-success' },
-  DEFENSE: { label: 'Defesa', icon: Shield, text: 'text-info', box: 'border-info/40 bg-info/10 text-info' },
-  BUFF: { label: 'Buff', icon: ArrowUpCircle, text: 'text-primary-soft', box: 'border-primary/50 bg-primary-dim text-primary-soft' },
-  DEBUFF: { label: 'Debuff', icon: ArrowDownCircle, text: 'text-warning', box: 'border-warning/40 bg-warning/10 text-warning' },
-  CONTROL: { label: 'Controle', icon: Zap, text: 'text-warning', box: 'border-warning/40 bg-warning/10 text-warning' },
-  POSITION: { label: 'Posição', icon: Move, text: 'text-silver', box: 'border-line-strong bg-raised text-silver' },
-  TEMPO: { label: 'Tempo', icon: Hourglass, text: 'text-silver', box: 'border-line-strong bg-raised text-silver' },
-  FIELD: { label: 'Campo', icon: Mountain, text: 'text-warning', box: 'border-warning/40 bg-warning/10 text-warning' },
-  RECOVER: { label: 'Recuperação', icon: RefreshCcw, text: 'text-success', box: 'border-success/40 bg-success/10 text-success' },
-}
 
 type Skill = Pick<SkillInfo, 'effects' | 'target' | 'range' | 'area'>
 

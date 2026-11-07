@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { ArrowLeft, UserX } from 'lucide-react'
+import { ArrowLeft, Infinity as InfinityIcon, UserX } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { SectionTitle } from '@/components/layout/page'
 import { Badge } from '@/components/ui/badge'
@@ -11,15 +11,19 @@ import { classIcons } from '@/features/game/class-icons'
 import {
   classLabels,
   useCharacter,
+  useSkillOffers,
   useTemplates,
   useTraits,
   type Character,
   type SkillInfo,
   type Template,
 } from '@/features/game/game-api'
-import { dangerLabels, lineageLabels } from '@/features/game/game-labels'
+import { rarityTone } from '@/features/economy/economy-labels'
+import { CharacterPortrait } from '@/features/game/character-art'
+import { dangerLabels, lineageLabels, statOrder } from '@/features/game/game-labels'
 import { TutorialButton } from '@/features/tutorial/tutorial-button'
 import { httpStatus } from '@/lib/api'
+import { cn } from '@/lib/cn'
 
 export function CharacterPage() {
   const { id = '' } = useParams()
@@ -88,6 +92,10 @@ function Hero({ character, template }: { character: Character; template?: Templa
   const progress = character.xpToNextLevel ? Math.min(100, (character.xp / character.xpToNextLevel) * 100) : 100
   const variants = template?.variants.filter((v) => v.isPrimary || v.key === character.awakenedVariantKey) ?? []
   const [first, ...rest] = character.name.split(' ')
+  const skillOffers = useSkillOffers()
+  const offers = skillOffers.data?.filter((o) => o.characterId === character.id).length ?? 0
+  const build = character.skills.filter((s) => s.buildSlot).length
+  const unspent = character.freePoints.available - statOrder.reduce((t, s) => t + character.freePoints.allocated[s], 0)
 
   return (
     <section className="relative isolate overflow-hidden border-b border-line">
@@ -128,7 +136,14 @@ function Hero({ character, template }: { character: Character; template?: Templa
                 <Icon className="size-3" />
                 {classLabels[character.characterClass]}
               </Badge>
-              {template && <Badge>Raridade {template.rarity}</Badge>}
+              {template && (
+                <span className="flex items-center gap-1.5 border border-line-strong bg-raised px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-fg-muted">
+                  Raridade
+                  <span className="font-display text-sm leading-none font-extrabold" style={{ color: rarityTone[template.rarity].color }}>
+                    {template.rarity}
+                  </span>
+                </span>
+              )}
               <Badge>Periculosidade {dangerLabels[character.danger]}</Badge>
             </div>
 
@@ -145,21 +160,62 @@ function Hero({ character, template }: { character: Character; template?: Templa
             {template?.description && <p className="max-w-xl text-[15px] leading-relaxed text-fg-muted">{template.description}</p>}
           </div>
 
-          {/* Nível e XP */}
-          <div className="chamfer w-full max-w-xs p-5 [--chamfer-bg:rgb(18_18_22/0.85)] [--chamfer-border:var(--color-line-strong)] [--cut:16px] sm:w-72">
-            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">Nível</p>
-            <p className="font-display text-6xl leading-none font-extrabold italic text-silver-bright tabular-nums">{character.level}</p>
-            <div className="mt-4 h-1 bg-overlay">
-              <div className="h-full bg-gradient-primary shadow-[0_0_10px_rgb(139_92_246/0.6)]" style={{ width: `${progress}%` }} />
+          {/* Nível, XP e o que falta resolver */}
+          <div className="chamfer group relative w-full max-w-xs overflow-hidden p-5 backdrop-blur-sm [--chamfer-bg:rgb(18_18_22/0.85)] [--chamfer-border:rgb(167_139_250/0.35)] [--cut:18px] transition-all hover:[--chamfer-border:rgb(167_139_250/0.7)] sm:w-80">
+            <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_70%_at_100%_0%,rgb(139_92_246/0.18),transparent)] opacity-70 transition-opacity group-hover:opacity-100" />
+            <span className="pointer-events-none absolute -right-2 -bottom-8 font-display text-[9rem] leading-none font-extrabold italic text-outline select-none">
+              {character.level}
+            </span>
+            <div className="relative flex items-end justify-between">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">Nível</p>
+                <p className="font-display text-7xl leading-none font-extrabold italic text-silver-bright tabular-nums">{character.level}</p>
+              </div>
+              <p className="pb-1 text-right font-mono text-[10px] text-fg-subtle tabular-nums">
+                {character.xpToNextLevel ? (
+                  <>
+                    faltam <span className="text-primary-soft">{character.xpToNextLevel - character.xp}</span> XP
+                  </>
+                ) : (
+                  'nível máximo'
+                )}
+              </p>
             </div>
-            <p className="mt-2 flex justify-between font-mono text-[11px] text-fg-muted tabular-nums">
+            <div className="relative mt-4 h-1.5 -skew-x-12 bg-overlay">
+              <div className="h-full bg-gradient-primary shadow-[0_0_10px_rgb(139_92_246/0.6)] transition-[width] duration-700 ease-out-soft" style={{ width: `${progress}%` }} />
+            </div>
+            <p className="relative mt-2 flex justify-between font-mono text-[11px] text-fg-muted tabular-nums">
               <span>XP</span>
               <span>{character.xpToNextLevel ? `${character.xp} / ${character.xpToNextLevel}` : 'Nível máximo'}</span>
             </p>
+
+            {/* pendências da ficha */}
+            <ul className="relative mt-4 grid grid-cols-3 gap-1.5 border-t border-line/70 pt-4">
+              <HeroStat label="Build" value={`${build}/4`} warn={build < 4} />
+              <HeroStat label="Pontos" value={String(unspent)} lit={unspent > 0} />
+              <HeroStat label="Blocos" value={String(offers)} lit={offers > 0} />
+            </ul>
           </div>
         </div>
       </div>
     </section>
+  )
+}
+
+/** Um número do cartão de nível: aceso quando pede ação, laranja quando falta algo. */
+function HeroStat({ label, value, lit, warn }: { label: string; value: string; lit?: boolean; warn?: boolean }) {
+  return (
+    <li
+      className={cn(
+        'border px-2 py-1.5 text-center transition-colors',
+        warn ? 'border-warning/40 bg-warning/10' : lit ? 'border-primary/50 bg-primary/10' : 'border-line bg-bg/40',
+      )}
+    >
+      <p className={cn('font-display text-xl leading-none font-extrabold italic tabular-nums', warn ? 'text-warning' : lit ? 'text-primary-soft' : 'text-fg-muted')}>
+        {value}
+      </p>
+      <p className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-fg-subtle">{label}</p>
+    </li>
   )
 }
 
@@ -170,26 +226,48 @@ function PassiveAndTraits({ character, template }: { character: Character; templ
   return (
     <div className="space-y-3">
       {template?.passive && (
-        <div className="chamfer p-4 [--chamfer-bg:var(--color-surface)] [--chamfer-border:var(--color-line)] [--cut:12px]">
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary-soft">Passiva</p>
-          <p className="mt-1 font-display text-xl font-bold uppercase tracking-wide text-silver-bright">{template.passive.name}</p>
-          <p className="mt-1 text-sm leading-relaxed text-fg-muted">{template.passive.description}</p>
+        <div className="chamfer group relative overflow-hidden p-4 [--chamfer-bg:var(--color-surface)] [--chamfer-border:rgb(167_139_250/0.3)] [--cut:14px] transition-all duration-300 hover:-translate-y-0.5 hover:[--chamfer-border:rgb(167_139_250/0.7)]">
+          <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_80%_at_0%_0%,rgb(139_92_246/0.14),transparent)] opacity-60 transition-opacity group-hover:opacity-100" />
+          <InfinityIcon className="pointer-events-none absolute -right-4 -bottom-6 size-24 text-primary-soft opacity-[0.05] transition-all duration-500 group-hover:rotate-12 group-hover:opacity-[0.12]" />
+          <div className="relative flex items-start gap-3">
+            <span className="relative flex size-10 shrink-0 items-center justify-center">
+              <span className="absolute inset-1.5 rotate-45 border border-primary-soft/60 bg-primary/15 shadow-[0_0_14px_-4px_var(--color-primary)] transition-transform duration-300 group-hover:rotate-135" />
+              <InfinityIcon className="relative size-4 text-primary-soft" />
+            </span>
+            <div className="min-w-0">
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary-soft">Passiva · sempre ativa</p>
+              <p className="font-display text-xl font-bold uppercase tracking-wide text-silver-bright">{template.passive.name}</p>
+              <p className="mt-1 text-sm leading-relaxed text-fg-muted transition-colors group-hover:text-fg">{template.passive.description}</p>
+            </div>
+          </div>
         </div>
       )}
 
       {owned.length === 0 ? (
         <p className="px-1 text-sm text-fg-subtle">Nenhum traço ainda. Traços vêm da família e de conquistas.</p>
       ) : (
-        <ul className="divide-y divide-line/70 border border-line/60 bg-surface/60">
-          {owned.map((trait) => (
-            <li key={trait.key} className="px-4 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-fg">{trait.name}</p>
-                {'source' in trait && <Badge>{trait.source === 'TEMPLATE' ? 'Família' : 'Conquistado'}</Badge>}
-              </div>
-              {trait.description && <p className="mt-0.5 text-xs leading-relaxed text-fg-muted">{trait.description}</p>}
-            </li>
-          ))}
+        <ul className="space-y-1.5">
+          {owned.map((trait) => {
+            const family = 'source' in trait && trait.source === 'TEMPLATE'
+            return (
+              <li
+                key={trait.key}
+                className="group relative border border-line/60 bg-surface/50 py-3 pr-4 pl-5 transition-all duration-200 hover:border-line-strong hover:bg-surface"
+              >
+                <span
+                  className={cn(
+                    'absolute inset-y-3 left-0 w-0.5 transition-all duration-200 group-hover:inset-y-0 group-hover:w-0.75',
+                    family ? 'bg-silver/50 group-hover:bg-silver' : 'bg-primary/60 group-hover:bg-primary group-hover:shadow-[0_0_8px_var(--color-primary)]',
+                  )}
+                />
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-display text-base font-bold uppercase tracking-wide text-fg transition-colors group-hover:text-silver-bright">{trait.name}</p>
+                  {'source' in trait && <Badge tone={family ? 'neutral' : 'primary'}>{family ? 'Família' : 'Conquistado'}</Badge>}
+                </div>
+                {trait.description && <p className="mt-0.5 text-xs leading-relaxed text-fg-muted transition-colors group-hover:text-fg">{trait.description}</p>}
+              </li>
+            )
+          })}
         </ul>
       )}
     </div>
@@ -209,5 +287,5 @@ function NotFound({ message }: { message: string }) {
       </div>
     </div>
   )
-}import { CharacterPortrait } from '@/features/game/character-art'
+}
 
