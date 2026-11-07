@@ -2,6 +2,11 @@ import {
   ArrowLeftRight,
   BookOpen,
   Clock,
+  Coins as Coins3,
+  Gem,
+  Package,
+  Percent,
+  Store,
   Crosshair,
   Eye,
   FastForward,
@@ -31,6 +36,8 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { fragmentLabels, rarityTone } from '@/features/economy/economy-labels'
+import { ChestArt, Coins, FragmentIcon } from '@/features/economy/economy-ui'
 import { difficultyLabels, type CharacterClass } from '@/features/game/game-api'
 import { FormationStep } from '@/features/squads/formation-tutorial'
 import type { Tutorial, TutorialId, TutorialStep } from '@/features/tutorial/tutorial-context'
@@ -781,6 +788,111 @@ export const tutorials: Record<TutorialId, Tutorial> = {
     ],
   },
 
+  mercado: {
+    id: 'mercado',
+    title: 'Mercado',
+    summary: 'Compre baús com a moeda das batalhas e troque fragmentos para aprimorar skills.',
+    steps: [
+      {
+        title: 'Moeda e fragmentos',
+        content: (
+          <StepLayout
+            lead="A carteira, no topo, tem a moeda (M) e os fragmentos de cada tipo. Os dois vêm do fim de toda batalha."
+            visual={
+              <div className="hud-corners flex flex-wrap items-center gap-4 border border-line/60 bg-surface/60 p-3 [--hud-color:var(--color-coin)]">
+                <Coins value={1250} className="text-xl font-bold text-silver-bright" iconClassName="size-5" />
+                <span className="flex flex-wrap gap-3 font-mono text-xs text-fg">
+                  {(['ELEMENTAL', 'VECTORIAL', 'NONE'] as const).map((type, i) => (
+                    <span key={type} className="flex items-center gap-1">
+                      <FragmentIcon type={type} />
+                      {[12, 4, 7][i]}
+                      <span className="text-fg-subtle">{fragmentLabels[type]}</span>
+                    </span>
+                  ))}
+                </span>
+              </div>
+            }
+            points={[
+              { icon: Coins3, label: 'Moeda', text: 'Vitória dá mais que derrota; adversário difícil rende mais. Repetir o mesmo adversário rende menos.' },
+              { icon: Gem, label: 'Fragmentos', text: 'Um tipo por linhagem, mais o Neutro. Servem para aprimorar skills. Até 500 por tipo: o que passar vira moeda.' },
+              { icon: Flag, label: 'Desistir', text: 'Desistir de uma batalha não dá nada.' },
+            ]}
+          />
+        ),
+      },
+      {
+        title: 'Comprar baús',
+        content: (
+          <StepLayout
+            lead="Cada baú traz 1 item, da raridade sorteada, e alguns fragmentos. Baú de nível mais alto custa mais e dá mais chance de raridade alta."
+            visual={
+              <div className="flex items-end gap-3">
+                {(['E', 'D', 'C'] as const).map((tier) => (
+                  <MockCard key={tier} className="flex flex-1 flex-col items-center gap-1" active={tier === 'D'}>
+                    <ChestArt tier={tier} className="h-10 w-12" />
+                    <span className={cn('font-display text-lg font-extrabold italic', rarityTone[tier].text)}>Baú {tier}</span>
+                  </MockCard>
+                ))}
+              </div>
+            }
+            points={[
+              { icon: Package, label: 'O item', text: 'Um personagem da raridade sorteada. Se você já tem, ou se não houver nenhum dessa raridade, vira moeda.' },
+              { icon: Percent, label: 'Chances', text: 'Cada baú mostra a chance de cada raridade, e abaixo estão os personagens que ainda faltam no seu elenco.' },
+              { icon: Store, label: 'Depois', text: 'O baú comprado chega fechado na tela Baús.' },
+            ]}
+          />
+        ),
+      },
+      {
+        title: 'Trocar fragmentos',
+        content: (
+          <StepLayout
+            lead="Escolha o tipo na lista e a quantidade. Comprar custa bem mais do que vender rende."
+            visual={
+              <div className="flex gap-2">
+                <MockButton>Comprar</MockButton>
+                <MockButton variant="secondary">Vender</MockButton>
+              </div>
+            }
+            points={[
+              { icon: Sparkles, label: 'Para quê', text: 'O aprimoramento pede fragmentos da linhagem da skill. Compre o tipo que falta, venda o que sobra.' },
+              { icon: Gem, label: 'Limite', text: 'Não dá para comprar além de 500 no tipo.' },
+            ]}
+          />
+        ),
+      },
+    ],
+  },
+
+  baus: {
+    id: 'baus',
+    title: 'Baús',
+    summary: 'Seus baús fechados, comprados ou caídos na batalha, e a abertura de cada um.',
+    steps: [
+      {
+        title: 'Abrir um baú',
+        content: (
+          <StepLayout
+            lead="Aqui ficam os baús fechados: os comprados no Mercado e os que caem no fim da batalha. Clique num para abrir."
+            visual={
+              <div className="flex items-center justify-center gap-4">
+                <ChestArt tier="C" className="h-16 w-20" />
+                <span className="font-mono text-fg-subtle">→</span>
+                <ChestArt tier="C" open className="h-16 w-20" />
+              </div>
+            }
+            points={[
+              { icon: Sparkles, label: 'Personagem novo', text: 'Entra no seu elenco na hora, no nível 0. O atalho leva à ficha dele.' },
+              { icon: Coins3, label: 'Repetido', text: 'Vira moeda, pelo valor da raridade.' },
+              { icon: Gem, label: 'Fragmentos', text: 'Todo baú também traz fragmentos de tipo sorteado.' },
+              { icon: Swords, label: 'Na batalha', text: 'O fim da batalha às vezes deixa um baú (na derrota, menos chance). No máximo um por batalha.' },
+            ]}
+          />
+        ),
+      },
+    ],
+  },
+
   conta: {
     id: 'conta',
     title: 'Minha conta',
@@ -807,7 +919,19 @@ export const tutorials: Record<TutorialId, Tutorial> = {
 export const tourOrder: TutorialId[] = ['lobby', 'personagens', 'personagem', 'esquadroes', 'batalhar', 'batalha', 'historico']
 
 /** Tutoriais listados no Guia (o de formação fica dentro de Esquadrões). */
-export const guideTutorials: TutorialId[] = ['lobby', 'personagens', 'personagem', 'esquadroes', 'formacao', 'batalhar', 'batalha', 'historico', 'conta']
+export const guideTutorials: TutorialId[] = [
+  'lobby',
+  'personagens',
+  'personagem',
+  'esquadroes',
+  'formacao',
+  'batalhar',
+  'batalha',
+  'mercado',
+  'baus',
+  'historico',
+  'conta',
+]
 
 /** Ícone de cada tutorial (lista do Guia). */
 export const tutorialIcons: Record<TutorialId, LucideIcon> = {
@@ -818,6 +942,8 @@ export const tutorialIcons: Record<TutorialId, LucideIcon> = {
   formacao: Grid3x3,
   batalhar: Swords,
   batalha: Crosshair,
+  mercado: Store,
+  baus: Package,
   historico: History,
   conta: KeyRound,
 }

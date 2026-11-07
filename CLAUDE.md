@@ -88,7 +88,8 @@ O cartão da conta no pé da barra leva a `/conta` (`account-page.tsx`): número
 
 ## Bônus de formação
 
-Na montagem do esquadrão (`formation-editor.tsx`), cada personagem mostra na grade os bônus da posição atual, as células
+Na montagem do esquadrão (`formation-editor.tsx`), cada personagem mostra na grade quantos bônus tem na posição atual
+(a lista abre no hover da célula; passar o mouse no painel ou no elenco acende a célula dele), as células
 vazias mostram o que muda se alguém vier para elas (`cellBonuses`: o que recebe dos vizinhos e o bônus próprio que liga ou,
 em laranja, desliga em Executor e Artilharia da grade) e o painel ao lado detalha, a cada movimento e
 sem nova requisição. Os valores vêm da API (`GET /formation-bonuses`,
@@ -98,6 +99,25 @@ sem nova requisição. Os valores vêm da API (`GET /formation-bonuses`,
 O ícone de ajuda sobre a grade abre o tutorial `formacao` (passos em `formation-tutorial.tsx`, lista em `tutorials.tsx`,
 que também fecha o tutorial de Esquadrões): grades de exemplo que passam pelo mesmo cálculo, então nenhum número do
 tutorial é escrito à mão. Regra nova de formação: novo passo aqui.
+
+## Economia (Mercado e Baús)
+
+Carteira com moeda (M) e 7 tipos de fragmento, baús e aprimoramento de skill (D150). Rotas e tipos em
+`src/features/economy/economy-api.ts`; nomes, ordem e cores em `economy-labels.ts` (tokens `coin`, `rarity-*` e
+`lineage-*` no `index.css`); peças visuais em `economy-ui.tsx` (`Coins`, `FragmentIcon`, `FragmentDeltaList`, `RarityTag`
+e `ChestArt`, o baú desenhado em SVG na cor do nível). **Preços e chances vêm de `GET /economy`** (`useEconomy`, com cache
+como o catálogo): nenhum valor escrito à mão. Toda resposta de gasto traz a carteira nova e grava no cache; um 409 (a
+carteira mudou em outra aba) recarrega a carteira.
+
+- `/mercado` (`market-page.tsx`): carteira (`WalletBar`), baús à venda com a chance de cada raridade, personagens fora do
+  elenco (o que pode sair), troca de fragmentos e o que a batalha dá.
+- `/baus` (`chests-page.tsx`): baús fechados e a abertura em modal (o baú treme um tempo mínimo e revela o item: personagem
+  novo, repetido que virou moeda ou raridade sem personagem, mais os fragmentos).
+- Fim da batalha: o `loot` (`result.loot`) aparece no `ResultOverlay` e no detalhe do Histórico; `useRefreshAfterBattle`
+  recarrega carteira e baús.
+- Aprimorar: `EnhancePanel` sob a skill na build (ficha do personagem), com custo pelo tipo e a linhagem da skill.
+- Barra lateral: grupo Economia (badge = baús fechados) e a moeda no cartão da conta. Artes do topo:
+  `banner-mercado.jpg` e `banner-baus.jpg` (sem arquivo, fica a grade).
 
 ## Rodando
 

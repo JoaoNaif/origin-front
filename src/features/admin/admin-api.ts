@@ -164,6 +164,7 @@ const fieldNames: Record<string, string> = {
   rarity: 'Raridade',
   initialDanger: 'Periculosidade',
   exclusivity: 'Exclusividade',
+  isStarter: 'Inicial',
   variants: 'Variante',
   familyTraitKey: 'Traço de família',
   stats: 'Atributos',

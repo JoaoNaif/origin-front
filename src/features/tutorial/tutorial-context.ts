@@ -12,6 +12,8 @@ export type TutorialId =
   | 'formacao'
   | 'batalhar'
   | 'batalha'
+  | 'mercado'
+  | 'baus'
   | 'historico'
   | 'conta'
 

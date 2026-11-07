@@ -56,6 +56,25 @@
   /* Foco */
   --color-ring: #a78bfa;
 
+  /* Economia: moeda (M) e raridade (E comum a SS raríssimo), no baú e no item que sai dele */
+  --color-coin: #e8c468;
+  --color-rarity-e: #9b9ba8;
+  --color-rarity-d: #3dd68c;
+  --color-rarity-c: #5eb1ef;
+  --color-rarity-b: #e879f9;
+  --color-rarity-a: #f5a524;
+  --color-rarity-s: #ff6b4a;
+  --color-rarity-ss: #ffd166;
+
+  /* Fragmentos de Éon: um tipo por linhagem, mais o Neutro */
+  --color-lineage-fundamental: #e4e4ea;
+  --color-lineage-elemental: #ff8a3d;
+  --color-lineage-material: #c8a27a;
+  --color-lineage-vectorial: #38bdf8;
+  --color-lineage-psychic: #d77cf5;
+  --color-lineage-biological: #4ade80;
+  --color-lineage-none: #8b8b96;
+
   /*
    * Arredondamento: quase reto, linguagem de HUD. Para destaque, usar o chanfro (`chamfer`).
    * control = input, célula da grade · card = card, painel · panel = modal, drawer · pill = avatar, ponto
@@ -158,6 +177,85 @@
       transform: scaleX(1);
     }
   }
+  /* Arte do destaque do lobby: aproxima devagar enquanto o slide está na tela */
+  --animate-kenburns: kenburns 9s ease-out forwards;
+
+  @keyframes kenburns {
+    from {
+      transform: scale(1.06) translateX(1.5%);
+    }
+    to {
+      transform: scale(1) translateX(0);
+    }
+  }
+
+  /* Baú do expositor flutuando sobre o pedestal */
+  --animate-bob: bob 3.2s ease-in-out infinite;
+
+  @keyframes bob {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+
+  /* Varredura de scanner que desce pelo cartão no hover (vitrine do Mercado) */
+  --animate-scan: scan 900ms var(--ease-out-soft);
+
+  @keyframes scan {
+    from {
+      transform: translateY(-100%);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(500%);
+      opacity: 0;
+    }
+  }
+
+  /* Baú: treme enquanto o servidor sorteia; o item revelado estoura no lugar */
+  --animate-chest-shake: chest-shake 0.5s ease-in-out infinite;
+  --animate-reveal: reveal 600ms var(--ease-out-soft) both;
+
+  @keyframes chest-shake {
+    0%,
+    100% {
+      transform: rotate(0) translateY(0);
+    }
+    20% {
+      transform: rotate(-4deg) translateY(-2px);
+    }
+    40% {
+      transform: rotate(4deg) translateY(-4px);
+    }
+    60% {
+      transform: rotate(-3deg) translateY(-2px);
+    }
+    80% {
+      transform: rotate(2deg) translateY(0);
+    }
+  }
+  @keyframes reveal {
+    0% {
+      opacity: 0;
+      transform: scale(0.7);
+      filter: brightness(3);
+    }
+    60% {
+      opacity: 1;
+      transform: scale(1.05);
+      filter: brightness(1.4);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+      filter: brightness(1);
+    }
+  }
+
   /* Faixa "X usa Y" no centro do campo */
   --animate-cast-in: cast-in 2.8s var(--ease-out-soft) forwards;
 

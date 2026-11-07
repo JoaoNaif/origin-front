@@ -14,6 +14,7 @@ import type {
   Stat,
   StatusType,
 } from '@/features/game/game-api'
+import type { BattleLoot } from '@/features/economy/economy-api'
 import { api } from '@/lib/api'
 
 // Batalha PvE (../origin-game/docs/api.md, "Batalhas"). O servidor é a autoridade (D9): a tela só mostra o estado,
@@ -105,6 +106,8 @@ export type Battle = {
     rounds: number
     finishedAt: string
     rewards: BattleReward[]
+    /** Moeda, fragmentos e baú; nulo na desistência. */
+    loot: BattleLoot | null
   } | null
   startedAt: string
 }
@@ -168,7 +171,7 @@ export type TurnOption = {
 export type BattleState = { battle: Battle; events: BattleEvent[] }
 
 /** Resposta de começar e de jogar: os eventos são só os desta jogada (e das vezes da máquina depois dela). */
-export type BattleStep = BattleState & { rewards: BattleReward[] }
+export type BattleStep = BattleState & { rewards: BattleReward[]; loot: BattleLoot | null }
 
 export const battleScreenKey = (id: string) => ['battle-screen', id] as const
 
@@ -232,12 +235,12 @@ export function useForfeit(id: string) {
   })
 }
 
-/** Fim da batalha: XP, níveis e blocos novos mudam a conta. */
+/** Fim da batalha: XP, níveis, blocos novos, moeda, fragmentos e baú mudam a conta. */
 export function useRefreshAfterBattle() {
   const queryClient = useQueryClient()
   return () =>
     Promise.all(
-      [['me', 'battles'], ['me', 'characters'], ['me', 'skill-offers'], ['characters']].map((queryKey) =>
+      [['me', 'battles'], ['me', 'characters'], ['me', 'skill-offers'], ['characters'], ['me', 'wallet'], ['me', 'chests']].map((queryKey) =>
         queryClient.invalidateQueries({ queryKey }),
       ),
     )

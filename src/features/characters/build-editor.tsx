@@ -3,6 +3,7 @@ import { Plus, RotateCcw, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { SkillCard, TierPips } from '@/features/characters/skill-card'
+import { EnhancePanel } from '@/features/economy/enhance-panel'
 import { useEquipSkills, type Character, type SkillInfo } from '@/features/game/game-api'
 import { tierLabels } from '@/features/game/game-labels'
 import { apiErrorMessage } from '@/lib/api'
@@ -154,11 +155,21 @@ export function BuildEditor({ character, catalog }: { character: Character; cata
 
         <div className="hud-corners min-h-56 border border-line/60 bg-surface/60 p-5 [--hud-color:var(--color-primary-soft)]">
           {focusedSkill ? (
-            <SkillCard
-              skill={focusedSkill}
-              enhanced={learned.find((s) => s.key === focusedSkill.key)?.isEnhanced}
-              aside={slots.includes(focusedSkill.key) && <Badge tone="primary">Na build</Badge>}
-            />
+            <div className="space-y-4">
+              <SkillCard
+                skill={focusedSkill}
+                enhanced={learned.find((s) => s.key === focusedSkill.key)?.isEnhanced}
+                aside={slots.includes(focusedSkill.key) && <Badge tone="primary">Na build</Badge>}
+              />
+              {learned.some((s) => s.key === focusedSkill.key) && (
+                <EnhancePanel
+                  key={focusedSkill.key}
+                  characterId={character.id}
+                  skill={focusedSkill}
+                  enhanced={!!learned.find((s) => s.key === focusedSkill.key)?.isEnhanced}
+                />
+              )}
+            </div>
           ) : (
             <p className="text-sm text-fg-muted">Selecione uma skill para ver os detalhes.</p>
           )}

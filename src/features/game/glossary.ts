@@ -79,3 +79,13 @@ export const battleTerms: { term: string; text: string }[] = [
   { term: 'Aura de classe', text: 'Cada classe dá um bônus aos aliados vizinhos na grade (frente, trás e lados). Auras iguais não somam.' },
   { term: 'Ancorado', text: 'Com um Vanguarda ao lado: não pode ser empurrado, puxado nem trocado à força.' },
 ]
+
+/** Termos da economia (Mercado, Baús, aprimoramento; D100, D104, D150). Valores exatos vêm de `GET /economy`. */
+export const economyTerms: { term: string; text: string }[] = [
+  { term: 'Moeda (M)', text: 'Vem do fim de toda batalha: vitória dá mais que derrota, adversário difícil rende mais e repetir o mesmo rende menos. Gasta em baús, fragmentos e aprimoramento.' },
+  { term: 'Fragmentos', text: 'Um tipo por linhagem, mais o Neutro. Vêm da batalha (do tipo das variantes do esquadrão) e dos baús. Até 500 por tipo: o que passar vira moeda.' },
+  { term: 'Baú', text: 'Traz 1 item da raridade sorteada e alguns fragmentos. Compra-se no Mercado (E, D e C) e às vezes cai no fim da batalha.' },
+  { term: 'Raridade', text: 'De E (comum) a SS (raríssimo): mede o quanto o personagem é difícil de conseguir, não a força. O nível do baú muda a chance de cada uma.' },
+  { term: 'Repetido', text: 'Personagem que você já tem saindo do baú: vira moeda pelo valor da raridade.' },
+  { term: 'Aprimorar', text: 'Tentativa paga de deixar uma skill 15% mais forte (dano, cura, escudo, buff e debuff). Custa moeda e fragmentos da linhagem da skill, que saem mesmo se não der certo. Uma vez por skill.' },
+]

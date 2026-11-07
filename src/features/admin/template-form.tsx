@@ -30,6 +30,7 @@ import {
   SelectField,
   TextAreaField,
   TextField,
+  Toggle,
 } from '@/features/admin/form-fields'
 import { InlineEntry } from '@/features/admin/inline-entry'
 import { SkillForm } from '@/features/admin/skill-form'
@@ -242,6 +243,12 @@ function IdentityStep({ value, onChange, itemKey, isNew, onKeyChange, keyError }
           options={toOptions(exclusivityLabels)}
           hint="Nenhuma = sai em baú e pode ser vendido. Evento/Ranqueado = só como prêmio, não vende."
           required
+        />
+        <Toggle
+          label="Personagem inicial"
+          checked={value.isStarter ?? false}
+          onChange={(checked) => set('isStarter', checked)}
+          hint="Marcado: toda conta nova já começa com ele. Desmarcado: só sai de baú."
         />
         <TextAreaField
           label="Descrição"
@@ -668,7 +675,7 @@ function ReviewStep({ value, catalog, itemKey, problems, onGo, onClearFamily }: 
   const kit = kitSkills(catalog, itemKey)
 
   const rows: { id: StepId; label: string; value: ReactNode }[] = [
-    { id: 'identity', label: 'Personagem', value: `${value.name || '—'} · ${classLabels[value.characterClass]} · raridade ${value.rarity}` },
+    { id: 'identity', label: 'Personagem', value: `${value.name || '—'} · ${classLabels[value.characterClass]} · raridade ${value.rarity} · ${value.isStarter ? 'inicial' : 'de baú'}` },
     {
       id: 'variants',
       label: 'Variantes',

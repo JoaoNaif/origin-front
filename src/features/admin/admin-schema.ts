@@ -46,6 +46,8 @@ export type TemplateBody = {
   rarity: Rarity
   initialDanger: DangerLevel
   exclusivity: Exclusivity
+  /** Inicial: a conta nova recebe; os outros só saem de baú (D150). */
+  isStarter: boolean
   variants: { variantKey: string; isPrimary: boolean }[]
   familyTraitKey: string | null
   stats: StatBlock
@@ -368,6 +370,7 @@ export const emptyBodies: Record<CatalogCollection, () => Record<string, unknown
     rarity: 'C',
     initialDanger: 'DISCRETE',
     exclusivity: 'NONE',
+    isStarter: false,
     variants: [],
     familyTraitKey: null,
     // perfil do Vanguarda no seed (orçamento 695)

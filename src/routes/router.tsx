@@ -6,11 +6,13 @@ import { AccountPage } from '@/pages/account-page'
 import { BattlePage } from '@/pages/battle-page'
 import { CharacterPage } from '@/pages/character-page'
 import { CharactersPage } from '@/pages/characters-page'
+import { ChestsPage } from '@/pages/chests-page'
 import { DesignPage } from '@/pages/design-page'
 import { GuidePage } from '@/pages/guide-page'
 import { HistoryPage } from '@/pages/history-page'
 import { HomePage } from '@/pages/home-page'
 import { LoginPage } from '@/pages/login-page'
+import { MarketPage } from '@/pages/market-page'
 import { PlayPage } from '@/pages/play-page'
 import { RegisterPage } from '@/pages/register-page'
 import { SquadsPage } from '@/pages/squads-page'
@@ -41,6 +43,8 @@ export const router = createBrowserRouter([
           { path: '/personagens', element: <CharactersPage /> },
           { path: '/personagens/:id', element: <CharacterPage /> },
           { path: '/esquadroes', element: <SquadsPage /> },
+          { path: '/mercado', element: <MarketPage /> },
+          { path: '/baus', element: <ChestsPage /> },
           { path: '/historico', element: <HistoryPage /> },
           { path: '/guia', element: <GuidePage /> },
           { path: '/conta', element: <AccountPage /> },

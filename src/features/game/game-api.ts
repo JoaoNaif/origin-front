@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query'
+import type { BattleLoot } from '@/features/economy/economy-api'
 import { api } from '@/lib/api'
 
 // Dados da conta logada usados no hub (../origin-game/docs/api.md).
@@ -64,6 +65,9 @@ export type BattleSummary = {
 
 export type SkillOffer = { id: string; characterId: string; level: number; skills: SkillInfo[] }
 
+/** Escala de raridade (E comum a SS raríssimo): também o nível do baú. */
+export type Rarity = 'E' | 'D' | 'C' | 'B' | 'A' | 'S' | 'SS'
+
 export type Lineage = 'FUNDAMENTAL' | 'ELEMENTAL' | 'MATERIAL' | 'VECTORIAL' | 'PSYCHIC' | 'BIOLOGICAL' | 'NONE'
 export type SkillTier = 'BASIC' | 'STANDARD' | 'REINFORCED' | 'STRONG' | 'FINAL'
 export type SkillRange = 'MELEE' | 'RANGED' | 'PIERCING' | 'FLANK'
@@ -112,7 +116,9 @@ export type Template = {
   name: string
   description: string
   characterClass: CharacterClass
-  rarity: string
+  rarity: Rarity
+  /** Inicial: a conta nova recebe; os outros só saem de baú. */
+  isStarter: boolean
   initialDanger: DangerLevel
   variants: { key: string; name: string; lineage: Lineage; isPrimary: boolean }[]
   familyTrait: { key: string; name: string } | null
@@ -287,6 +293,8 @@ export type BattleDetail = {
     ref: string
     side: 'PLAYER' | 'OPPONENT'
     characterId: string | null
+    /** Também o nome da imagem em public/characters. */
+    templateKey: string
     name: string
     characterClass: CharacterClass
     level: number
@@ -301,6 +309,8 @@ export type BattleDetail = {
     finishedAt: string
     /** Vazio na desistência. */
     rewards: BattleReward[]
+    /** Moeda, fragmentos e baú; nulo na desistência. */
+    loot: BattleLoot | null
   } | null
 }
 

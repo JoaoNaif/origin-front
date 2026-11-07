@@ -60,6 +60,10 @@ export function TutorialProvider({ accountId, children }: { accountId: string; c
         return '/esquadroes'
       case 'batalhar':
         return '/batalhar'
+      case 'mercado':
+        return '/mercado'
+      case 'baus':
+        return '/baus'
       case 'historico':
         return '/historico'
       case 'conta':

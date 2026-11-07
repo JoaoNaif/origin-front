@@ -12,6 +12,7 @@ import {
   Lock,
   Mountain,
   Move,
+  Package,
   ScrollText,
   Shield,
   ShieldOff,
@@ -30,6 +31,9 @@ import { Button } from '@/components/ui/button'
 import { buttonClasses } from '@/components/ui/button-classes'
 import type { Battle, BattleUnit, Side } from '@/features/battle/battle-api'
 import { displayHp, toneText, type LogIcon, type LogTurn } from '@/features/battle/battle-events'
+import type { BattleLoot } from '@/features/economy/economy-api'
+import { rarityTone } from '@/features/economy/economy-labels'
+import { ChestArt, Coins, FragmentDeltaList } from '@/features/economy/economy-ui'
 import { classIcons } from '@/features/game/class-icons'
 import { difficultyLabels, type Stat } from '@/features/game/game-api'
 import { endReasonLabels, profileLabels, statLabels, statShort } from '@/features/game/game-labels'
@@ -335,7 +339,35 @@ function TurnBlock({ turn, actor, current }: { turn: LogTurn; actor?: BattleUnit
   )
 }
 
-/** Fim da batalha: resultado, motivo e o XP de cada um. */
+/** O que a batalha deu além do XP: moeda, fragmentos e, às vezes, um baú (já na conta). */
+function LootPanel({ loot }: { loot: BattleLoot }) {
+  return (
+    <div className="mt-4 space-y-3 border-t border-line pt-4">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <Coins value={loot.coins} signed className="text-lg font-bold text-silver-bright" iconClassName="size-5" />
+        <FragmentDeltaList fragments={loot.fragments} />
+      </div>
+      {loot.chest && (
+        <Link
+          to="/baus"
+          className="focus-ring chamfer group flex items-center gap-3 p-3 [--chamfer-bg:rgb(18_18_22/0.9)] [--cut:12px]"
+          style={{ '--chamfer-border': `color-mix(in srgb, ${rarityTone[loot.chest.tier].color} 55%, transparent)` } as React.CSSProperties}
+        >
+          <ChestArt tier={loot.chest.tier} className="h-10 w-12 shrink-0" />
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-lg font-bold uppercase tracking-wide text-silver-bright">
+              Caiu um baú <span className={rarityTone[loot.chest.tier].text}>{loot.chest.tier}</span>
+            </span>
+            <span className="block text-xs text-fg-muted">Está em Baús, pronto para abrir.</span>
+          </span>
+          <Package className="size-4 text-fg-subtle transition-colors group-hover:text-primary-soft" />
+        </Link>
+      )}
+    </div>
+  )
+}
+
+/** Fim da batalha: resultado, motivo, o XP de cada um e o loot. */
 export function ResultOverlay({ battle, onClose }: { battle: Battle; onClose: () => void }) {
   const result = battle.result
   if (!result) return null
@@ -392,6 +424,8 @@ export function ResultOverlay({ battle, onClose }: { battle: Battle; onClose: ()
             })
           )}
         </div>
+
+        {result.loot && <LootPanel loot={result.loot} />}
 
         <div className="mt-8 flex flex-wrap justify-end gap-2">
           <Button variant="ghost" size="sm" onClick={onClose}>
