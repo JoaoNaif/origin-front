@@ -438,4 +438,30 @@
   ::selection {
     @apply bg-primary/40 text-silver-bright;
   }
+
+  /*
+   * Mãozinha em tudo que se clica. O Tailwind v4 deixa o <button> com a seta padrão; aqui volta o pointer para botões,
+   * controles com papel de botão (abas, opções), selects, caixas de marcar e o rótulo que envolve uma delas.
+   * Desabilitado mostra "não permitido". Classes de cursor no elemento (cursor-grab, cursor-default...) continuam
+   * valendo: utilitários ganham da camada base.
+   */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='tab']:not([aria-disabled='true']),
+  [role='option']:not([aria-disabled='true']),
+  [role='switch']:not([aria-disabled='true']),
+  [role='menuitem']:not([aria-disabled='true']),
+  select:not(:disabled),
+  summary,
+  input:is([type='checkbox'], [type='radio'], [type='range'], [type='color'], [type='file']):not(:disabled),
+  label:has(> input:is([type='checkbox'], [type='radio']):not(:disabled)) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  [aria-disabled='true'] {
+    cursor: not-allowed;
+  }
 }
