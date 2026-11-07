@@ -6,7 +6,7 @@ import { api, apiErrorMessage, type ApiErrorBody } from '@/lib/api'
 
 // Rotas de admin (../origin-game/docs/api.md, "Admin"). Todas dão 403 para quem não é ADMIN.
 
-export type CatalogCollection = 'variants' | 'traits' | 'templates' | 'skills' | 'fields' | 'npc-squads'
+export type CatalogCollection = 'variants' | 'traits' | 'templates' | 'skills' | 'fields' | 'npc-squads' | 'awakenings'
 
 /** Item no formato do corpo da edição (ligações pela `key`) mais os campos só de leitura. */
 export type CatalogItem = { key: string; name: string } & Record<string, unknown>
@@ -20,6 +20,7 @@ export type AdminCatalog = {
   skills: CatalogItem[]
   fields: CatalogItem[]
   npcSquads: CatalogItem[]
+  awakenings: CatalogItem[]
 }
 
 /** Coleção da URL → chave na resposta de `GET /admin/catalog`. */
@@ -30,6 +31,7 @@ export const catalogKeys: Record<CatalogCollection, Exclude<keyof AdminCatalog, 
   skills: 'skills',
   fields: 'fields',
   'npc-squads': 'npcSquads',
+  awakenings: 'awakenings',
 }
 
 /** Campos que o `GET /admin/catalog` traz e o `PUT` ignora. */
@@ -37,6 +39,7 @@ export const readOnlyFields: Partial<Record<CatalogCollection, string[]>> = {
   templates: ['skillKeys'],
   skills: ['lineage', 'isAwakened', 'templateKey', 'reference'],
   'npc-squads': ['level'],
+  awakenings: ['baseVariantKey'],
 }
 
 /** Corpo da edição: o item sem a `key` (vai na URL) e sem os campos só de leitura. */
@@ -68,7 +71,7 @@ export function useAdminOptions() {
 export type SkillReference = { power: number; desgastePercent: number; cooldown: number; minLevel: number }
 
 /** Valores de referência do tipo + forma (D16, D92), enquanto o admin monta a skill. */
-export function useSkillReference(params: { tier: string; target: string; range: string | null; area: string; isNone: boolean }) {
+export function useSkillReference(params: { tier: string; target: string; range: string | null; area: string; isNone: boolean; isAwakened: boolean }) {
   return useQuery({
     queryKey: ['admin', 'skill-reference', params],
     queryFn: async () =>
@@ -79,6 +82,7 @@ export function useSkillReference(params: { tier: string; target: string; range:
             target: params.target,
             area: params.area,
             isNone: params.isNone,
+            isAwakened: params.isAwakened,
             // alcance só conta em skill de inimigo
             ...(params.target === 'ENEMY' && params.range ? { range: params.range } : {}),
           },
@@ -193,6 +197,10 @@ const fieldNames: Record<string, string> = {
   awakenedVariantKey: 'Variante despertada',
   skillKeys: 'Build',
   traitKeys: 'Traços',
+  requirements: 'Perfil',
+  missions: 'Missão',
+  kind: 'Tipo',
+  threshold: 'Limiar',
 }
 
 const fieldPath = (path: (string | number)[]) =>

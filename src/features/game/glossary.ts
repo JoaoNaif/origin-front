@@ -1,4 +1,4 @@
-import type { Stat, StatusType } from '@/features/game/game-api'
+import type { AwakeningHint, Stat, StatusType } from '@/features/game/game-api'
 
 // Glossário para o jogador: o que cada atributo, status e termo da batalha quer dizer. Texto curto e sem fórmula
 // (regras em ../origin-game/docs/game_design.md D68, D73, D91, D102, D123 a D125 e skills_brief.md 12.4).
@@ -78,6 +78,23 @@ export const battleTerms: { term: string; text: string }[] = [
   { term: 'Campo', text: 'Sorteado antes da batalha: quem tem um dos traços pedidos ganha bônus em dois atributos. Algumas skills trocam o campo.' },
   { term: 'Aura de classe', text: 'Cada classe dá um bônus aos aliados vizinhos na grade (frente, trás e lados). Auras iguais não somam.' },
   { term: 'Ancorado', text: 'Com um Vanguarda ao lado: não pode ser empurrado, puxado nem trocado à força.' },
+]
+
+/**
+ * Dica do despertar na ficha (D151). Nunca diz qual despertar nem quais missões: só que algo está mudando.
+ * SILENT não aparece.
+ */
+export const awakeningHints: Record<Exclude<AwakeningHint, 'SILENT'>, { label: string; short: string; text: string }> = {
+  SIGNS: { label: 'Algo desperta', short: 'Sinais', text: 'O poder dele começou a mudar. Continue levando ele para a batalha.' },
+  IMMINENT: { label: 'Despertar iminente', short: 'Iminente', text: 'Está perto. Falta pouco para o poder dele evoluir.' },
+  AWAKENED: { label: 'Despertado', short: 'Despertado', text: 'O poder evoluiu. As skills da variante despertada aparecem nos blocos de skill.' },
+}
+
+export const awakeningTerms: { term: string; text: string }[] = [
+  { term: 'Despertar', text: 'A evolução do poder de um personagem (fogo vira plasma). Uma vez só, e só para quem tem uma variante, se ela tiver despertar.' },
+  { term: 'Quando', text: 'A partir do nível 80. O caminho é secreto e muda de personagem para personagem: ninguém diz o que fazer.' },
+  { term: 'Sinais', text: 'A ficha avisa quando algo desperta e quando está perto. Sem aviso, nada mudou ainda.' },
+  { term: 'Skills despertadas', text: 'Mais fortes que as da variante base, com mais Desgaste. Ao despertar, você recebe um bloco de recuperação para cada nível de despertada já atingido.' },
 ]
 
 /** Termos da economia (Mercado, Baús, aprimoramento; D100, D104, D150). Valores exatos vêm de `GET /economy`. */

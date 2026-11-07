@@ -28,6 +28,7 @@ import {
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { AwakenedBanner } from '@/features/characters/awakening-ui'
 import { buttonClasses } from '@/components/ui/button-classes'
 import type { Battle, BattleUnit, Side } from '@/features/battle/battle-api'
 import { displayHp, toneText, type LogIcon, type LogTurn } from '@/features/battle/battle-events'
@@ -393,6 +394,11 @@ export function ResultOverlay({ battle, onClose }: { battle: Battle; onClose: ()
           {title}
         </h2>
 
+        <AwakenedBanner
+          className="mt-6"
+          names={result.rewards.filter((r) => r.awakened).map((r) => names.get(r.characterId)?.name ?? 'Personagem')}
+        />
+
         <div className="mt-6 space-y-2">
           {result.rewards.length === 0 ? (
             <p className="text-sm text-fg-muted">Sem XP nesta batalha.</p>
@@ -412,6 +418,11 @@ export function ResultOverlay({ battle, onClose }: { battle: Battle; onClose: ()
                     <Icon className="size-4 text-silver/60" />
                   )}
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-fg">{unit?.name ?? 'Personagem'}</span>
+                  {reward.awakened && (
+                    <Badge tone="primary">
+                      <Flame className="size-3" /> Despertou
+                    </Badge>
+                  )}
                   {reward.newSkillOffers > 0 && (
                     <Badge tone="primary">
                       <Sparkles className="size-3" /> {reward.newSkillOffers} bloco{reward.newSkillOffers > 1 && 's'}

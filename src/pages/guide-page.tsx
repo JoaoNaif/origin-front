@@ -5,6 +5,7 @@ import {
   Coins,
   Compass,
   Crosshair,
+  Flame,
   GraduationCap,
   Grid3x3,
   Play,
@@ -20,7 +21,7 @@ import { Button } from '@/components/ui/button'
 import { classIcons } from '@/features/game/class-icons'
 import { classLabels, type CharacterClass, type StatusType } from '@/features/game/game-api'
 import { classAuras, statLabels, statOrder, statShort, statusLabels } from '@/features/game/game-labels'
-import { battleTerms, economyTerms, statInfo, statusDetails, statusShort, statusTone } from '@/features/game/glossary'
+import { awakeningTerms, battleTerms, economyTerms, statInfo, statusDetails, statusShort, statusTone } from '@/features/game/glossary'
 import { statusEffects } from '@/features/game/skill-text'
 import { useTutorial } from '@/features/tutorial/tutorial-context'
 import { guideTutorials, tutorialIcons, tutorials } from '@/features/tutorial/tutorials'
@@ -35,6 +36,7 @@ const sections: { id: string; label: string; icon: LucideIcon }[] = [
   { id: 'status', label: 'Status', icon: Sparkles },
   { id: 'classes', label: 'Classes', icon: Shield },
   { id: 'batalha', label: 'Batalha', icon: ScrollText },
+  { id: 'despertar', label: 'Despertar', icon: Flame },
   { id: 'economia', label: 'Economia', icon: Coins },
 ]
 
@@ -170,8 +172,13 @@ export function GuidePage() {
             <TermGrid terms={battleTerms} tone="var(--color-primary-soft)" />
           </Section>
 
-          {/* 06 Economia */}
-          <Section id="economia" index="06" title="Economia" lead="Moeda, fragmentos, baús e aprimoramento: o que você ganha e onde gasta.">
+          {/* 06 Despertar */}
+          <Section id="despertar" index="06" title="Despertar" lead="A evolução secreta do poder, a partir do nível 80.">
+            <TermGrid terms={awakeningTerms} tone="var(--color-warning)" />
+          </Section>
+
+          {/* 07 Economia */}
+          <Section id="economia" index="07" title="Economia" lead="Moeda, fragmentos, baús e aprimoramento: o que você ganha e onde gasta.">
             <TermGrid terms={economyTerms} tone="var(--color-coin)" />
           </Section>
 

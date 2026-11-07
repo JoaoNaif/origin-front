@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, Sparkles } from 'lucide-react'
+import { Check, Flame, Sparkles } from 'lucide-react'
 import { SectionTitle } from '@/components/layout/page'
 import { Button } from '@/components/ui/button'
 import { SkillCard } from '@/features/characters/skill-card'
@@ -18,6 +18,8 @@ export function SkillOffers({ characterId, templateKey, characterClass }: { char
   if (!pending.length) return null
 
   const [current, ...next] = pending
+  const recovery = current.source === 'AWAKENING'
+  const TitleIcon = recovery ? Flame : Sparkles
 
   return (
     <section className="space-y-5">
@@ -31,8 +33,8 @@ export function SkillOffers({ characterId, templateKey, characterClass }: { char
         }
       >
         <CharacterPortrait templateKey={templateKey} characterClass={characterClass} zoom={3.6} className="size-8 self-center border border-primary/40 bg-primary-dim" iconClassName="size-4 text-primary-soft" />
-        <Sparkles className="size-4 self-center text-primary-soft" />
-        Bloco de skill · nível {current.level}
+        <TitleIcon className={cn('size-4 self-center', recovery ? 'text-warning' : 'text-primary-soft')} />
+        {recovery ? 'Recuperação do despertar' : 'Bloco de skill'} · nível {current.level}
       </SectionTitle>
       {/* key: escolhido um bloco, o próximo começa sem seleção */}
       <OfferBlock key={current.id} offer={current} characterId={characterId} />
@@ -47,6 +49,14 @@ function OfferBlock({ offer, characterId }: { offer: SkillOffer; characterId: st
 
   return (
     <div className="space-y-4">
+      {offer.source === 'AWAKENING' && (
+        <p className="flex items-start gap-2 border-l-2 border-warning bg-warning/5 px-3 py-2 text-sm text-fg-muted">
+          <Flame className="mt-0.5 size-4 shrink-0 text-warning" />
+          <span>
+            Ele despertou já acima do nível {offer.level}: este bloco repõe esse nível e traz ao menos uma skill despertada.
+          </span>
+        </p>
+      )}
       <p className="text-sm text-fg-muted">
         Escolha 1 das {offer.skills.length}. A escolha é definitiva; a skill entra nas aprendidas e você põe na build quando quiser.
       </p>

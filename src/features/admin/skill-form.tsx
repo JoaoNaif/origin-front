@@ -194,7 +194,7 @@ export function SkillForm(props: FormProps<SkillBody> & { kit?: KitLock }) {
   const ownerClass = kit?.characterClass ?? (owner?.characterClass as CharacterClass | undefined)
   const variant = catalog.variants.find((v) => v.key === value.variantKey)
   const isNone = !variant || variant.lineage === 'NONE'
-  const reference = useSkillReference({ tier: value.tier, target: value.target, range: value.range, area: value.area, isNone })
+  const reference = useSkillReference({ tier: value.tier, target: value.target, range: value.range, area: value.area, isNone, isAwakened: !!variant?.awakensFromKey })
   const problems = findProblems(props, ownerClass)
   const shared: StepProps = { ...props, ownerClass, reference: reference.data }
 

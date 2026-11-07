@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { Page } from '@/components/layout/page'
 import { BannerMeta, PageBanner } from '@/components/layout/page-banner'
 import { Badge } from '@/components/ui/badge'
+import { AwakenedBanner } from '@/features/characters/awakening-ui'
 import { buttonClasses } from '@/components/ui/button-classes'
 import { rarityTone } from '@/features/economy/economy-labels'
 import { ChestArt, Coins, FragmentDeltaList } from '@/features/economy/economy-ui'
@@ -434,6 +435,11 @@ function BattleDetails({ battle }: { battle: BattleSummary }) {
         <p className="text-sm text-danger">Não foi possível carregar os detalhes desta batalha.</p>
       ) : (
         <>
+          <AwakenedBanner
+            names={(detail.data.result?.rewards ?? [])
+              .filter((r) => r.awakened)
+              .map((r) => detail.data.units.find((u) => u.characterId === r.characterId)?.name ?? 'Personagem')}
+          />
           <div className="grid gap-4 md:grid-cols-2">
             <SideCard title="Seu esquadrão" side="PLAYER" battle={detail.data} />
             <SideCard title={battle.opponent.name} side="OPPONENT" battle={detail.data} />
@@ -544,6 +550,11 @@ function SideCard({ title, side, battle }: { title: string; side: 'PLAYER' | 'OP
                         <Badge tone="primary">
                           LV {reward.level}
                           {reward.newSkillOffers > 0 && <Sparkles className="size-3" />}
+                        </Badge>
+                      )}
+                      {reward.awakened && (
+                        <Badge tone="primary">
+                          <Flame className="size-3" /> Despertou
                         </Badge>
                       )}
                     </>

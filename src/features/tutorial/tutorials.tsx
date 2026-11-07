@@ -298,6 +298,7 @@ export const tutorials: Record<TutorialId, Tutorial> = {
               { label: 'Etiquetas', text: 'Classe, raridade e periculosidade do personagem.' },
               { label: 'Variantes', text: 'A linha abaixo do nome. A linhagem de cada variante decide qual atributo as skills dela desgastam.' },
               { label: 'Nível', text: 'Sobe com a experiência das batalhas e libera pontos de atributo e skills novas.' },
+              { label: 'Despertar', text: 'A partir do nível 80, um aviso sob o nome mostra quando o poder começa a mudar. O caminho é secreto.' },
             ]}
           />
         ),

@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom'
 import { SectionTitle } from '@/components/layout/page'
 import { Badge } from '@/components/ui/badge'
 import { buttonClasses } from '@/components/ui/button-classes'
+import { AwakeningCard } from '@/features/characters/awakening-ui'
 import { BuildEditor } from '@/features/characters/build-editor'
 import { SkillOffers } from '@/features/characters/skill-offers'
 import { StatsPanel } from '@/features/characters/stats-panel'
@@ -153,11 +154,20 @@ function Hero({ character, template }: { character: Character; template?: Templa
             </h1>
 
             {variants.length > 0 && (
-              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-fg-muted">
-                {variants.map((v) => `${v.name} · ${lineageLabels[v.lineage]}`).join('  /  ')}
+              <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.18em] text-fg-muted">
+                {variants.map((v, i) => (
+                  <span key={v.key} className="flex items-center gap-3">
+                    {i > 0 && <span className="text-fg-subtle">/</span>}
+                    <span className={cn(v.key === character.awakenedVariantKey && 'text-primary-soft')}>
+                      {v.key === character.awakenedVariantKey && '✦ '}
+                      {v.name} · {lineageLabels[v.lineage]}
+                    </span>
+                  </span>
+                ))}
               </p>
             )}
             {template?.description && <p className="max-w-xl text-[15px] leading-relaxed text-fg-muted">{template.description}</p>}
+            <AwakeningCard hint={character.awakeningHint} />
           </div>
 
           {/* Nível, XP e o que falta resolver */}

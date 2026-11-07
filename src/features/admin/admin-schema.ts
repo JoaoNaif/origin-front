@@ -99,6 +99,33 @@ export type NpcSquadBody = {
   members: NpcMember[]
 }
 
+export type AwakeningRequirementLevel = 'HIGH' | 'LOW'
+export type AwakeningMissionCategory = 'ACCUMULATIVE' | 'REPEATED' | 'MILESTONE'
+export type AwakeningMissionKind =
+  | 'KILLS'
+  | 'STATUS_APPLIED'
+  | 'HEAVY_HITS'
+  | 'SUPPORT_ACTIONS'
+  | 'DAMAGE_SHARE'
+  | 'SUPPORT_SHARE'
+  | 'LAST_ALIVE_WIN'
+  | 'MULTI_KILL'
+  | 'SOLE_SURVIVOR_WIN'
+  | 'ENEMY_HP_SHARE'
+  | 'TRIPLE_KILL'
+
+/** Despertar (D151): a variante despertada que ele dá, o perfil do sorteio e o pool de missões ocultas. */
+export type AwakeningBody = {
+  name: string
+  description: string | null
+  variantKey: string
+  requirements: { stat: Stat; level: AwakeningRequirementLevel }[]
+  missions: { kind: AwakeningMissionKind; threshold: number }[]
+}
+
+/** Categoria e limiar padrão de cada tipo de missão (`awakeningMissionKinds` de `GET /admin/options`). */
+export type AwakeningMissionKinds = Record<AwakeningMissionKind, { category: AwakeningMissionCategory; defaultThreshold: number }>
+
 /** Regras de `GET /admin/options` (`rules`) que a tela usa nas dicas. */
 export type AdminRules = {
   classBudget: Record<CharacterClass, number>
@@ -113,6 +140,10 @@ export type AdminRules = {
   traitStatCapPercent: number
   fieldTraits: { min: number; max: number }
   fieldPercent: { primary: number; secondary: number }
+  /** Perfil do despertar: de `min` a `max` requisitos, no máximo `maxPerLevel` altos e `maxPerLevel` baixos. */
+  awakeningRequirements?: { min: number; max: number; maxPerLevel: number }
+  /** Frações e contagens que algumas missões usam (`damageShare` 0,4...). */
+  awakeningMissionRules?: { damageShare: number; supportShare: number; multiKill: number; tripleKill: number; enemyHpShare: number }
 }
 
 export const rarityLabels: Record<Rarity, string> = { E: 'E', D: 'D', C: 'C', B: 'B', A: 'A', S: 'S', SS: 'SS' }
@@ -412,6 +443,20 @@ export const emptyBodies: Record<CatalogCollection, () => Record<string, unknown
       { templateKey: '', level: 15, row: 2, column: 1, awakenedVariantKey: null, skillKeys: [], traitKeys: [] },
     ],
   }),
+  awakenings: (): AwakeningBody => ({
+    name: '',
+    description: null,
+    variantKey: '',
+    requirements: [
+      { stat: 'ATTACK', level: 'HIGH' },
+      { stat: 'DEFENSE', level: 'LOW' },
+    ],
+    missions: [
+      { kind: 'KILLS', threshold: 100 },
+      { kind: 'DAMAGE_SHARE', threshold: 15 },
+      { kind: 'TRIPLE_KILL', threshold: 1 },
+    ],
+  }),
 }
 
 /** `key` a partir do nome: sem acento, minúsculas, espaços viram `-` ("Olho de Águia" → "olho-de-aguia"). */
@@ -466,6 +511,12 @@ export const collectionInfo: Record<CatalogCollection, { label: string; singular
     singular: 'squad de NPC',
     example: 'Ex.: Patrulha da Fronteira, Iniciante',
     help: 'Os adversários da máquina: 4 personagens com nível, posição na grade e as 4 skills da build.',
+  },
+  awakenings: {
+    label: 'Despertares',
+    singular: 'despertar',
+    example: 'Ex.: Plasma, de Combustão: Ataque e Precisão altos',
+    help: 'A evolução de uma variante a partir do nível 80. Cada despertar dá uma variante despertada, tem um perfil (quem combina tem mais chance no sorteio) e um pool de missões ocultas.',
   },
 }
 

@@ -202,6 +202,39 @@
     }
   }
 
+  /* Despertar: o núcleo pulsa (mais rápido no iminente) e a faixa do aviso de fim de batalha acende */
+  --animate-awaken-pulse: awaken-pulse 2.6s ease-in-out infinite;
+  --animate-awaken-pulse-fast: awaken-pulse 1.3s ease-in-out infinite;
+  --animate-awaken-in: awaken-in 900ms var(--ease-out-soft) both;
+
+  @keyframes awaken-pulse {
+    0%,
+    100% {
+      opacity: 0.55;
+      transform: scale(0.92);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.08);
+    }
+  }
+
+  @keyframes awaken-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.96);
+      filter: brightness(2.2);
+    }
+    60% {
+      opacity: 1;
+      filter: brightness(1.4);
+    }
+    100% {
+      transform: scale(1);
+      filter: brightness(1);
+    }
+  }
+
   /* Varredura de scanner que desce pelo cartão no hover (vitrine do Mercado) */
   --animate-scan: scan 900ms var(--ease-out-soft);
 

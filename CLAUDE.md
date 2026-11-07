@@ -119,6 +119,17 @@ carteira mudou em outra aba) recarrega a carteira.
 - Barra lateral: grupo Economia (badge = baús fechados) e a moeda no cartão da conta. Artes do topo:
   `banner-mercado.jpg` e `banner-baus.jpg` (sem arquivo, fica a grade).
 
+## Despertar
+
+Tudo oculto (D151): o jogador só vê o `awakeningHint` do personagem (`SILENT`, `SIGNS`, `IMMINENT`, `AWAKENED`), nunca
+qual despertar nem as missões. Peças em `src/features/characters/awakening-ui.tsx`: `AwakeningCard` (topo da ficha, com a
+trilha de estágios), `AwakeningChip` (cartão de Personagens) e `AwakenedBanner` (`reward.awakened` no `ResultOverlay` e no
+detalhe do Histórico). Textos em `awakeningHints` e `awakeningTerms` do glossário e na seção `#despertar` do Guia. Os
+blocos de recuperação (`source: AWAKENING`) aparecem em `SkillOffers` com título e aviso próprios. A API do jogador não
+manda o nome da variante despertada (só a key), então a ficha mostra só "Despertado". No admin, a coleção `awakenings`
+(`awakening-form.tsx`: variante despertada, perfil alto/baixo e pool de missões com uma de cada categoria; tipos em
+`admin-schema.ts`, espelho de `catalog.ts`); a skill de variante despertada pede a referência com `isAwakened`.
+
 ## Rodando
 
 - Backend: `npm run start:dev` no `origin-game` (porta 3333).

@@ -32,6 +32,8 @@ export type Character = {
   xpToNextLevel: number | null
   danger: DangerLevel
   awakenedVariantKey: string | null
+  /** Única pista do despertar (D151): nunca qual é nem as missões. */
+  awakeningHint: AwakeningHint
   /** Fora de batalha: nível + pontos livres + traços. */
   stats: StatBlock
   freePoints: { allocated: StatBlock; available: number; maxPerStat: StatBlock }
@@ -39,6 +41,9 @@ export type Character = {
   /** `buildSlot` 1 a 4 = na build. */
   skills: { key: string; name: string; source: 'KIT' | 'OFFER'; isEnhanced: boolean; buildSlot: number | null }[]
 }
+
+/** SILENT = nada; SIGNS = 1 missão oculta cumprida; IMMINENT = 2; AWAKENED = despertou. */
+export type AwakeningHint = 'SILENT' | 'SIGNS' | 'IMMINENT' | 'AWAKENED'
 
 export type Squad = {
   id: string
@@ -63,7 +68,8 @@ export type BattleSummary = {
   finishedAt: string | null
 }
 
-export type SkillOffer = { id: string; characterId: string; level: number; skills: SkillInfo[] }
+/** `source`: subida de nível ou recuperação ao despertar (D151). */
+export type SkillOffer = { id: string; characterId: string; level: number; source: 'LEVEL_UP' | 'AWAKENING'; skills: SkillInfo[] }
 
 /** Escala de raridade (E comum a SS raríssimo): também o nível do baú. */
 export type Rarity = 'E' | 'D' | 'C' | 'B' | 'A' | 'S' | 'SS'
@@ -283,7 +289,7 @@ export function useDeleteSquad() {
   })
 }
 
-export type BattleReward = { characterId: string; xp: number; levelsGained: number; level: number; newSkillOffers: number }
+export type BattleReward = { characterId: string; xp: number; levelsGained: number; level: number; newSkillOffers: number; awakened?: boolean }
 
 /** Só o que o histórico usa de `GET /battles/:id` (o resto é da tela de batalha). */
 export type BattleDetail = {

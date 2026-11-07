@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { Page } from '@/components/layout/page'
 import { BannerMeta, PageBanner } from '@/components/layout/page-banner'
 import { Badge } from '@/components/ui/badge'
+import { AwakeningChip } from '@/features/characters/awakening-ui'
 import { rarityTone } from '@/features/economy/economy-labels'
 import { classIcons } from '@/features/game/class-icons'
 import {
@@ -296,6 +297,9 @@ function CharacterCard({ character, rarity, offers }: { character: Character; ra
           ))}
         </span>
       )}
+
+      {/* dica do despertar: só aparece quando há sinal */}
+      <AwakeningChip hint={character.awakeningHint} className="absolute top-4 left-4" />
 
       <div className="relative space-y-2.5">
         {/* classe e raridade numa linha só */}
