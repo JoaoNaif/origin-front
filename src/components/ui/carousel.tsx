@@ -105,7 +105,7 @@ export function ArrowButton({ direction, disabled, onClick }: { direction: 'prev
       disabled={disabled}
       aria-label={direction === 'prev' ? 'Anterior' : 'Próximo'}
       className={cn(
-        'focus-ring chamfer flex size-10 items-center justify-center text-fg-muted [--cut:8px]',
+        'focus-ring chamfer group flex size-10 items-center justify-center text-fg-muted [--cut:8px]',
         '[--chamfer-bg:var(--color-raised)] [--chamfer-border:var(--color-line-strong)]',
         'transition-all duration-150 ease-out-soft',
         'hover:text-silver-bright hover:[--chamfer-border:rgb(167_139_250/0.7)] hover:[--chamfer-bg:var(--color-overlay)]',
@@ -113,7 +113,12 @@ export function ArrowButton({ direction, disabled, onClick }: { direction: 'prev
         'disabled:pointer-events-none disabled:opacity-30',
       )}
     >
-      <Icon className="size-4" />
+      <Icon
+        className={cn(
+          'size-4 transition-transform duration-150 ease-out-soft',
+          direction === 'prev' ? 'group-hover:-translate-x-0.5' : 'group-hover:translate-x-0.5',
+        )}
+      />
     </button>
   )
 }

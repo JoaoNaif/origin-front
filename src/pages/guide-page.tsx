@@ -1,182 +1,504 @@
-import { useEffect } from 'react'
-import { BookOpen, ChevronRight, Compass } from 'lucide-react'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import {
+  BookOpen,
+  ChevronRight,
+  Coins,
+  Compass,
+  Crosshair,
+  GraduationCap,
+  Grid3x3,
+  Play,
+  ScrollText,
+  Shield,
+  Sparkles,
+  type LucideIcon,
+} from 'lucide-react'
 import { useLocation } from 'react-router-dom'
-import { Page, PageHeader, SectionTitle } from '@/components/layout/page'
+import { BannerMeta, PageBanner } from '@/components/layout/page-banner'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { classIcons } from '@/features/game/class-icons'
 import { classLabels, type CharacterClass, type StatusType } from '@/features/game/game-api'
 import { classAuras, statLabels, statOrder, statShort, statusLabels } from '@/features/game/game-labels'
-import { battleTerms, statInfo, statusDetails, statusShort, statusTone } from '@/features/game/glossary'
+import { battleTerms, economyTerms, statInfo, statusDetails, statusShort, statusTone } from '@/features/game/glossary'
 import { statusEffects } from '@/features/game/skill-text'
 import { useTutorial } from '@/features/tutorial/tutorial-context'
 import { guideTutorials, tutorialIcons, tutorials } from '@/features/tutorial/tutorials'
 import { cn } from '@/lib/cn'
 
-const sections = [
-  { id: 'tutoriais', label: 'Tutoriais' },
-  { id: 'atributos', label: 'Atributos' },
-  { id: 'status', label: 'Status' },
-  { id: 'classes', label: 'Classes' },
-  { id: 'batalha', label: 'Batalha' },
+/** Arte do topo (public/art). Sem o arquivo, fica só o fundo. */
+const GUIDE_ART = '/art/banner-guia.jpg'
+
+const sections: { id: string; label: string; icon: LucideIcon }[] = [
+  { id: 'tutoriais', label: 'Tutoriais', icon: GraduationCap },
+  { id: 'atributos', label: 'Atributos', icon: Crosshair },
+  { id: 'status', label: 'Status', icon: Sparkles },
+  { id: 'classes', label: 'Classes', icon: Shield },
+  { id: 'batalha', label: 'Batalha', icon: ScrollText },
+  { id: 'economia', label: 'Economia', icon: Coins },
 ]
 
 const statusOrder = Object.keys(statusLabels) as StatusType[]
 const classOrder = Object.keys(classAuras) as CharacterClass[]
 
-/** Guia do jogador: o que cada atributo, status, classe e termo da batalha quer dizer (texto de `glossary.ts`). */
+/** Grupo do status pela cor da etiqueta (`statusTone`): controle, dano recebido ou os outros. */
+type StatusGroup = 'ALL' | 'CONTROL' | 'DAMAGE' | 'OTHER'
+const statusGroupOf = (status: StatusType): Exclude<StatusGroup, 'ALL'> =>
+  statusTone[status].includes('warning') ? 'CONTROL' : statusTone[status].includes('danger') ? 'DAMAGE' : 'OTHER'
+const statusColor = (status: StatusType) =>
+  statusTone[status].includes('warning')
+    ? 'var(--color-warning)'
+    : statusTone[status].includes('danger')
+      ? 'var(--color-danger)'
+      : statusTone[status].includes('primary')
+        ? 'var(--color-primary-soft)'
+        : 'var(--color-success)'
+const statusGroups: { value: StatusGroup; label: string; tone: string }[] = [
+  { value: 'ALL', label: 'Todos', tone: 'var(--color-primary-soft)' },
+  { value: 'CONTROL', label: 'Controle', tone: 'var(--color-warning)' },
+  { value: 'DAMAGE', label: 'Dano recebido', tone: 'var(--color-danger)' },
+  { value: 'OTHER', label: 'Outros', tone: 'var(--color-success)' },
+]
+
+/** Guia do jogador: o que cada atributo, status, classe, termo da batalha e da economia quer dizer (texto de `glossary.ts`). */
 export function GuidePage() {
   // âncora vinda de outro lugar (ex.: "O que cada atributo faz" no personagem)
   const { hash } = useLocation()
   const { open, startTour } = useTutorial()
+  const active = useActiveSection()
+
   useEffect(() => {
     if (hash) document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [hash])
 
   return (
-    <Page>
-      <PageHeader
-        eyebrow="Manual de campo"
-        title="Guia"
-        description="Como cada tela funciona, para que serve cada atributo, o que os status fazem e os termos da batalha."
+    <div className="pb-16">
+      <PageBanner
+        art={GUIDE_ART}
+        outlineWord="Manual"
+        meta={
+          <>
+            <Badge tone="primary">
+              <BookOpen className="size-3" />
+              Manual de campo
+            </Badge>
+            <BannerMeta>
+              {sections.length} seções · {guideTutorials.length} tutoriais
+            </BannerMeta>
+          </>
+        }
+        title={
+          <>
+            Gu
+            <span className="text-gradient-primary pr-3">ia</span>
+          </>
+        }
+        description="Como cada tela funciona, para que serve cada atributo, o que os status fazem e os termos da batalha e da economia."
         actions={
-          <Button variant="secondary" onClick={startTour}>
-            <Compass className="size-4" />
+          <Button size="lg" onClick={startTour} className="group">
+            <Compass className="size-5 transition-transform duration-500 group-hover:rotate-180" />
             Fazer o tour
           </Button>
         }
       />
 
-      {/* atalhos para as seções */}
-      <nav aria-label="Seções do guia" className="flex flex-wrap gap-2">
-        {sections.map((s, i) => (
-          <a
-            key={s.id}
-            href={`#${s.id}`}
-            className="focus-ring chamfer flex items-center gap-2 px-3 py-1.5 [--chamfer-bg:var(--color-surface)] [--chamfer-border:var(--color-line-strong)] [--cut:7px] hover:[--chamfer-border:rgb(167_139_250/0.6)]"
-          >
-            <span className="font-mono text-[10px] text-primary-soft">{String(i + 1).padStart(2, '0')}</span>
-            <span className="font-display text-sm font-bold uppercase tracking-widest text-fg">{s.label}</span>
-          </a>
-        ))}
-      </nav>
+      <div className="mx-auto grid max-w-7xl gap-10 px-6 pt-10 lg:grid-cols-[13rem_minmax(0,1fr)] lg:px-10">
+        <SectionNav active={active} />
 
-      <section id="tutoriais" className="scroll-mt-6 space-y-5">
-        <SectionTitle index="01">Tutoriais das telas</SectionTitle>
-        <p className="max-w-2xl text-sm text-fg-muted">
-          Cada tela tem o seu passo a passo, também aberto pelo botão <span className="text-fg">Tutorial</span> no topo dela. O tour passa
-          pelos principais em sequência.
-        </p>
-        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {guideTutorials.map((id) => {
-            const { title, summary, steps } = tutorials[id]
-            const Icon = tutorialIcons[id]
-            return (
-              <li key={id}>
-                <button
-                  type="button"
-                  onClick={() => open(id)}
-                  className="focus-ring chamfer group flex h-full w-full items-start gap-3 p-4 text-left [--chamfer-bg:var(--color-surface)] [--chamfer-border:var(--color-line)] [--cut:12px] transition-all hover:[--chamfer-border:rgb(167_139_250/0.6)]"
-                >
-                  <span className="flex size-9 shrink-0 items-center justify-center border border-line-strong text-primary-soft">
-                    <Icon className="size-4" />
-                  </span>
-                  <span className="min-w-0 flex-1 space-y-1">
-                    <span className="flex items-baseline justify-between gap-2">
-                      <span className="font-display text-lg leading-tight font-bold uppercase tracking-wide text-silver-bright">{title}</span>
-                      <span className="shrink-0 font-mono text-[10px] text-fg-subtle">
-                        {steps.length} {steps.length === 1 ? 'passo' : 'passos'}
-                      </span>
+        <div className="min-w-0 space-y-16">
+          {/* 01 Tutoriais */}
+          <Section id="tutoriais" index="01" title="Tutoriais das telas" lead="Cada tela tem o seu passo a passo, também aberto pelo botão Tutorial no topo dela.">
+            <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <li className="sm:col-span-2 xl:col-span-3">
+                <TourCard onStart={startTour} />
+              </li>
+              {guideTutorials.map((id, i) => {
+                const { title, summary, steps } = tutorials[id]
+                return (
+                  <li key={id}>
+                    <TutorialCard index={i + 1} icon={tutorialIcons[id]} title={title} summary={summary} steps={steps.length} onOpen={() => open(id)} />
+                  </li>
+                )
+              })}
+            </ul>
+          </Section>
+
+          {/* 02 Atributos */}
+          <Section id="atributos" index="02" title="Atributos" lead="Os 7 números de cada personagem. Sobem com o nível e com os pontos livres que você distribui.">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {statOrder.map((stat, i) => (
+                <HoverCard key={stat} tone="var(--color-primary-soft)" watermark={statShort[stat]}>
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 min-w-12 items-center justify-center border border-(--tone)/50 bg-(--tone)/10 px-2 font-mono text-sm font-bold text-(--tone) transition-colors group-hover:bg-(--tone)/20">
+                      {statShort[stat]}
                     </span>
-                    <span className="block text-sm leading-relaxed text-fg-muted">{summary}</span>
-                  </span>
-                  <ChevronRight className="size-4 shrink-0 self-center text-fg-subtle transition-transform group-hover:translate-x-0.5 group-hover:text-primary-soft" />
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      </section>
-
-      <section id="atributos" className="scroll-mt-6 space-y-5">
-        <SectionTitle index="02">Atributos</SectionTitle>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {statOrder.map((stat) => (
-            <div key={stat} className="hud-corners flex gap-4 border border-line/60 bg-surface/60 p-4">
-              <span className="w-10 shrink-0 font-mono text-lg font-bold text-primary-soft">{statShort[stat]}</span>
-              <div className="space-y-1">
-                <p className="font-display text-lg leading-tight font-bold uppercase tracking-wide text-silver-bright">{statLabels[stat]}</p>
-                <p className="text-sm leading-relaxed text-fg-muted">{statInfo[stat]}</p>
-              </div>
+                    <p className="flex-1 font-display text-xl leading-tight font-bold uppercase tracking-wide text-silver-bright">{statLabels[stat]}</p>
+                    <span className="font-mono text-[10px] text-fg-subtle">{String(i + 1).padStart(2, '0')}</span>
+                  </div>
+                  <p className="mt-3 text-sm leading-relaxed text-fg-muted transition-colors group-hover:text-fg">{statInfo[stat]}</p>
+                </HoverCard>
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
+          </Section>
 
-      <section id="status" className="scroll-mt-6 space-y-5">
-        <SectionTitle index="03">Status</SectionTitle>
-        <p className="max-w-2xl text-sm text-fg-muted">
-          Efeitos que as skills deixam no alvo. A chance de pegar é a base abaixo, disputada entre a Precisão de quem usa e a
-          Vontade de quem recebe. A duração conta nos turnos de quem recebe.
-        </p>
-        <ul className="divide-y divide-line/60 border-y border-line/60">
-          {statusOrder.map((status) => {
-            const detail = statusDetails[status]
-            return (
-              <li key={status} className="grid gap-2 py-4 sm:grid-cols-[11rem_minmax(0,1fr)_9rem] sm:items-start sm:gap-6">
-                <span className="flex items-center gap-2">
-                  <span className={cn('px-1 font-mono text-[10px] font-bold', statusTone[status])}>{statusShort[status]}</span>
-                  <span className="font-display text-lg leading-tight font-bold uppercase tracking-wide text-silver-bright">{statusLabels[status]}</span>
-                </span>
-                <span className="space-y-1">
-                  <span className="block text-sm text-fg first-letter:uppercase">{statusEffects[status]}.</span>
-                  {detail.note && <span className="block text-sm text-fg-muted">{detail.note}</span>}
-                </span>
-                <span className="flex gap-4 font-mono text-[11px] text-fg-subtle sm:flex-col sm:gap-0.5 sm:text-right">
-                  <span>{detail.turns ? `${detail.turns} ${detail.turns === 1 ? 'turno' : 'turnos'}` : 'até a recarga'}</span>
-                  <span>base {Math.round(detail.chance * 100)}%</span>
-                </span>
-              </li>
-            )
-          })}
-        </ul>
-      </section>
+          {/* 03 Status */}
+          <Section
+            id="status"
+            index="03"
+            title="Status"
+            lead="Efeitos que as skills deixam no alvo. A chance de pegar é a base, disputada entre a Precisão de quem usa e a Vontade de quem recebe. A duração conta nos turnos de quem recebe."
+          >
+            <StatusList />
+          </Section>
 
-      <section id="classes" className="scroll-mt-6 space-y-5">
-        <SectionTitle index="04">Classes e auras</SectionTitle>
-        <p className="max-w-2xl text-sm text-fg-muted">
-          Cada classe dá uma aura aos aliados vizinhos na grade (frente, trás e lados). Auras iguais não somam: a formação conta.
-        </p>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {classOrder.map((cls) => {
-            const Icon = classIcons[cls]
-            return (
-              <div key={cls} className="chamfer space-y-2 p-4 [--chamfer-bg:var(--color-surface)] [--chamfer-border:var(--color-line)] [--cut:12px]">
-                <p className="flex items-center gap-2">
-                  <Icon className="size-4 text-primary-soft" />
-                  <span className="font-display text-lg leading-tight font-bold uppercase tracking-wide text-silver-bright">{classLabels[cls]}</span>
-                </p>
-                <p className="text-sm leading-relaxed text-fg-muted">{classAuras[cls]}</p>
-              </div>
-            )
-          })}
-        </div>
-      </section>
-
-      <section id="batalha" className="scroll-mt-6 space-y-5">
-        <SectionTitle index="05">Termos da batalha</SectionTitle>
-        <dl className="grid gap-x-8 gap-y-4 md:grid-cols-2">
-          {battleTerms.map((t) => (
-            <div key={t.term} className="border-l-2 border-primary/50 pl-4">
-              <dt className="font-display text-base font-bold uppercase tracking-wide text-silver-bright">{t.term}</dt>
-              <dd className="text-sm leading-relaxed text-fg-muted">{t.text}</dd>
+          {/* 04 Classes */}
+          <Section
+            id="classes"
+            index="04"
+            title="Classes e auras"
+            lead="Cada classe dá uma aura aos aliados vizinhos na grade (frente, trás e lados). Auras iguais não somam: a formação conta. Passe o mouse para ver onde vale."
+          >
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {classOrder.map((cls) => (
+                <ClassCard key={cls} characterClass={cls} />
+              ))}
             </div>
-          ))}
-        </dl>
-      </section>
+          </Section>
 
-      <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle">
-        <BookOpen className="size-3.5" /> Os números exatos de cada jogada aparecem na prévia da batalha.
+          {/* 05 Batalha */}
+          <Section id="batalha" index="05" title="Termos da batalha" lead="O vocabulário da tela de batalha.">
+            <TermGrid terms={battleTerms} tone="var(--color-primary-soft)" />
+          </Section>
+
+          {/* 06 Economia */}
+          <Section id="economia" index="06" title="Economia" lead="Moeda, fragmentos, baús e aprimoramento: o que você ganha e onde gasta.">
+            <TermGrid terms={economyTerms} tone="var(--color-coin)" />
+          </Section>
+
+          <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle">
+            <BookOpen className="size-3.5" /> Os números exatos de cada jogada aparecem na prévia da batalha.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Seção visível agora (para o índice): a mais alta que passou do terço de cima da tela. */
+function useActiveSection() {
+  const [active, setActive] = useState(sections[0].id)
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+        if (visible[0]) setActive(visible[0].target.id)
+      },
+      { rootMargin: '-25% 0px -65% 0px' },
+    )
+    for (const s of sections) {
+      const el = document.getElementById(s.id)
+      if (el) observer.observe(el)
+    }
+    return () => observer.disconnect()
+  }, [])
+  return active
+}
+
+/** Índice: fixo ao lado no desktop (com a seção atual acesa e a trilha de progresso); faixa rolável no mobile. */
+function SectionNav({ active }: { active: string }) {
+  const current = sections.findIndex((s) => s.id === active)
+
+  return (
+    <nav aria-label="Seções do guia" className="lg:sticky lg:top-6 lg:self-start">
+      <p className="mb-3 hidden font-mono text-[10px] uppercase tracking-[0.2em] text-fg-subtle lg:block">
+        <span className="text-primary-soft">//</span> Índice
       </p>
-    </Page>
+      <ol className="relative flex gap-1.5 overflow-x-auto pb-1 lg:flex-col lg:gap-1 lg:overflow-visible lg:pb-0">
+        {/* trilha: enche até a seção atual */}
+        <span className="pointer-events-none absolute top-2 bottom-2 left-0 hidden w-px bg-line lg:block" />
+        <span
+          className="pointer-events-none absolute top-2 left-0 hidden w-px bg-primary shadow-[0_0_8px_var(--color-primary)] transition-all duration-500 ease-out-soft lg:block"
+          style={{ height: `calc(${((current + 1) / sections.length) * 100}% - 1rem)` }}
+        />
+        {sections.map((s, i) => {
+          const isActive = s.id === active
+          const Icon = s.icon
+          return (
+            <li key={s.id} className="shrink-0">
+              <a
+                href={`#${s.id}`}
+                aria-current={isActive ? 'true' : undefined}
+                className={cn(
+                  'focus-ring chamfer group flex items-center gap-2.5 py-2 pr-3 pl-3 [--cut:8px] transition-all duration-200 lg:pl-4',
+                  isActive
+                    ? 'text-silver-bright [--chamfer-bg:rgb(139_92_246/0.12)] [--chamfer-border:rgb(167_139_250/0.5)]'
+                    : 'text-fg-muted [--chamfer-bg:transparent] [--chamfer-border:transparent] hover:text-fg hover:[--chamfer-bg:var(--color-surface)] hover:[--chamfer-border:var(--color-line)] lg:hover:translate-x-1',
+                )}
+              >
+                <span className={cn('font-mono text-[10px] transition-colors', isActive ? 'text-primary-soft' : 'text-fg-subtle group-hover:text-primary-soft')}>
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <Icon className={cn('size-3.5 transition-colors', isActive ? 'text-primary-soft' : 'text-fg-subtle group-hover:text-fg-muted')} />
+                <span className="font-display text-sm font-bold uppercase tracking-widest">{s.label}</span>
+              </a>
+            </li>
+          )
+        })}
+      </ol>
+    </nav>
+  )
+}
+
+function Section({ id, index, title, lead, children }: { id: string; index: string; title: string; lead: string; children: ReactNode }) {
+  return (
+    <section id={id} className="scroll-mt-6 space-y-6">
+      <header className="relative space-y-2 border-b border-line pb-4">
+        <span className="pointer-events-none absolute -top-6 right-0 font-display text-8xl leading-none font-extrabold italic text-outline opacity-60 select-none">
+          {index}
+        </span>
+        <h2 className="flex items-baseline gap-3 font-display text-4xl leading-none font-extrabold uppercase italic text-silver-bright">
+          <span className="font-mono text-xs font-medium not-italic text-primary-soft">{index}</span>
+          {title}
+        </h2>
+        <p className="max-w-2xl text-sm leading-relaxed text-fg-muted">{lead}</p>
+      </header>
+      {children}
+    </section>
+  )
+}
+
+/** Cartão base do guia: chanfro com a cor em `--tone`, brilho e marca d'água que acordam no hover. */
+function HoverCard({ tone, watermark, className, children }: { tone: string; watermark?: ReactNode; className?: string; children: ReactNode }) {
+  return (
+    <div
+      style={{ '--tone': tone } as CSSProperties}
+      className={cn(
+        'chamfer group relative h-full overflow-hidden p-4 [--cut:14px]',
+        '[--chamfer-bg:var(--color-surface)] [--chamfer-border:var(--color-line)]',
+        'transition-transform duration-300 ease-out-soft hover:-translate-y-1 hover:[--chamfer-border:color-mix(in_srgb,var(--tone)_65%,transparent)]',
+        className,
+      )}
+    >
+      <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_80%_at_100%_0%,color-mix(in_srgb,var(--tone)_14%,transparent),transparent)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      {watermark && (
+        <span className="pointer-events-none absolute -right-1 -bottom-4 font-display text-7xl leading-none font-extrabold italic text-(--tone) opacity-[0.05] transition-all duration-500 ease-out-soft select-none group-hover:-translate-x-1 group-hover:opacity-[0.12]">
+          {watermark}
+        </span>
+      )}
+      <div className="relative">{children}</div>
+    </div>
+  )
+}
+
+function TourCard({ onStart }: { onStart: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onStart}
+      className="focus-ring chamfer group relative flex w-full items-center gap-5 overflow-hidden p-5 text-left [--cut:18px] [--chamfer-bg:var(--color-primary-dim)] [--chamfer-border:rgb(167_139_250/0.45)] transition-transform duration-300 ease-out-soft hover:-translate-y-1 hover:[--chamfer-border:var(--color-primary-soft)]"
+    >
+      <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_120%_at_0%_50%,rgb(139_92_246/0.3),transparent)] opacity-60 transition-opacity duration-300 group-hover:opacity-100" />
+      <span className="pointer-events-none absolute inset-0 scanlines" />
+      <Compass className="pointer-events-none absolute -right-6 -bottom-10 size-44 text-primary-soft opacity-[0.07] transition-transform duration-700 ease-out-soft group-hover:rotate-90" />
+
+      <span className="relative flex size-14 shrink-0 items-center justify-center">
+        <span className="absolute inset-2 rotate-45 border border-primary-soft/70 bg-primary/20 shadow-[0_0_20px_-4px_var(--color-primary)] transition-transform duration-300 ease-out-soft group-hover:rotate-135" />
+        <Play className="relative size-5 text-silver-bright" />
+      </span>
+      <span className="relative min-w-0 flex-1">
+        <span className="block font-mono text-[10px] uppercase tracking-[0.2em] text-primary-soft">Comece por aqui</span>
+        <span className="block font-display text-3xl leading-none font-extrabold uppercase italic text-silver-bright">Tour guiado</span>
+        <span className="mt-1 block text-sm text-fg-muted">Passa pelas telas principais em sequência, explicando cada uma no lugar.</span>
+      </span>
+      <span className="relative hidden items-center gap-2 font-display text-sm font-bold uppercase tracking-[0.14em] text-primary-soft sm:flex">
+        Começar <ChevronRight className="size-4 transition-transform group-hover:translate-x-1" />
+      </span>
+    </button>
+  )
+}
+
+function TutorialCard({ index, icon: Icon, title, summary, steps, onOpen }: {
+  index: number
+  icon: LucideIcon
+  title: string
+  summary: string
+  steps: number
+  onOpen: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="focus-ring chamfer group relative flex h-full w-full flex-col gap-3 overflow-hidden p-4 text-left [--cut:14px] [--chamfer-bg:var(--color-surface)] [--chamfer-border:var(--color-line)] transition-transform duration-300 ease-out-soft hover:-translate-y-1 hover:[--chamfer-border:rgb(167_139_250/0.6)]"
+    >
+      <span className="pointer-events-none absolute inset-y-0 left-0 w-2/3 -translate-x-full bg-linear-to-r from-primary/10 to-transparent transition-transform duration-500 ease-out-soft group-hover:translate-x-0" />
+      <Icon className="pointer-events-none absolute -right-3 -bottom-4 size-20 -rotate-12 text-primary-soft opacity-[0.04] transition-all duration-500 ease-out-soft group-hover:-rotate-3 group-hover:opacity-[0.1]" />
+
+      <span className="relative flex items-center gap-3">
+        <span className="relative flex size-10 shrink-0 items-center justify-center">
+          <span className="absolute inset-1.5 rotate-45 border border-line-strong bg-bg/60 transition-all duration-300 ease-out-soft group-hover:rotate-135 group-hover:border-primary-soft/60 group-hover:bg-primary/10" />
+          <Icon className="relative size-4 text-primary-soft" />
+        </span>
+        <span className="min-w-0 flex-1 truncate font-display text-xl leading-tight font-bold uppercase tracking-wide text-silver-bright">{title}</span>
+        <span className="font-mono text-[10px] text-fg-subtle">{String(index).padStart(2, '0')}</span>
+      </span>
+      <span className="relative flex-1 text-sm leading-relaxed text-fg-muted transition-colors group-hover:text-fg">{summary}</span>
+      <span className="relative flex items-center gap-3">
+        {/* um traço por passo */}
+        <span className="flex flex-1 gap-0.5" aria-hidden>
+          {Array.from({ length: steps }, (_, i) => (
+            <span
+              key={i}
+              className="h-1 max-w-6 flex-1 -skew-x-12 bg-overlay transition-colors duration-300 group-hover:bg-primary-soft"
+              style={{ transitionDelay: `${i * 40}ms` }}
+            />
+          ))}
+        </span>
+        <span className="font-mono text-[10px] text-fg-subtle">
+          {steps} {steps === 1 ? 'passo' : 'passos'}
+        </span>
+        <ChevronRight className="size-4 text-fg-subtle transition-all group-hover:translate-x-0.5 group-hover:text-primary-soft" />
+      </span>
+    </button>
+  )
+}
+
+function StatusList() {
+  const [group, setGroup] = useState<StatusGroup>('ALL')
+  const shown = statusOrder.filter((s) => group === 'ALL' || statusGroupOf(s) === group)
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar status">
+        {statusGroups.map((g) => {
+          const count = g.value === 'ALL' ? statusOrder.length : statusOrder.filter((s) => statusGroupOf(s) === g.value).length
+          const isActive = group === g.value
+          return (
+            <button
+              key={g.value}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() => setGroup(g.value)}
+              style={{ '--tone': g.tone } as CSSProperties}
+              className={cn(
+                'focus-ring chamfer group flex h-9 items-center gap-2 px-3.5 font-display text-sm font-semibold uppercase tracking-widest transition-all [--cut:8px]',
+                isActive
+                  ? 'text-silver-bright [--chamfer-bg:color-mix(in_srgb,var(--tone)_14%,var(--color-surface))] [--chamfer-border:color-mix(in_srgb,var(--tone)_65%,transparent)]'
+                  : 'text-fg-muted [--chamfer-bg:var(--color-surface)] [--chamfer-border:var(--color-line)] hover:-translate-y-0.5 hover:text-fg hover:[--chamfer-border:color-mix(in_srgb,var(--tone)_40%,var(--color-line))]',
+              )}
+            >
+              <span className={cn('size-1.5 rotate-45 bg-(--tone)', isActive ? 'shadow-[0_0_6px_var(--tone)]' : 'opacity-50 group-hover:opacity-100')} />
+              {g.label}
+              <span className={cn('font-mono text-[10px]', isActive ? 'text-(--tone)' : 'text-fg-subtle')}>{count}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {shown.map((status) => {
+          const detail = statusDetails[status]
+          return (
+            <li key={status} className="motion-safe:animate-fade-in">
+              <HoverCard tone={statusColor(status)} watermark={statusShort[status]}>
+                <div className="flex items-center gap-2.5">
+                  <span className={cn('px-1.5 py-0.5 font-mono text-[10px] font-bold', statusTone[status])}>{statusShort[status]}</span>
+                  <span className="font-display text-xl leading-tight font-bold uppercase tracking-wide text-silver-bright">{statusLabels[status]}</span>
+                </div>
+                <p className="mt-3 text-sm font-medium text-fg first-letter:uppercase">{statusEffects[status]}.</p>
+                {detail.note && <p className="mt-1 text-sm leading-relaxed text-fg-muted">{detail.note}</p>}
+                <div className="mt-4 grid grid-cols-2 gap-3 border-t border-line/70 pt-3">
+                  <div>
+                    <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-fg-subtle">Duração</p>
+                    <p className="font-mono text-xs text-fg">{detail.turns ? `${detail.turns} ${detail.turns === 1 ? 'turno' : 'turnos'}` : 'até a recarga'}</p>
+                  </div>
+                  <div>
+                    <p className="flex justify-between font-mono text-[9px] uppercase tracking-[0.18em] text-fg-subtle">
+                      Chance base <span className="text-fg">{Math.round(detail.chance * 100)}%</span>
+                    </p>
+                    <span className="mt-1.5 block h-1 -skew-x-12 bg-overlay">
+                      <span className="block h-full bg-(--tone) transition-shadow group-hover:shadow-[0_0_8px_var(--tone)]" style={{ width: `${detail.chance * 100}%` }} />
+                    </span>
+                  </div>
+                </div>
+              </HoverCard>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+/**
+ * Onde a aura de cada classe vale, numa grade 3x3 (frente à direita, como na montagem): a classe no meio e os vizinhos
+ * acesos. Executor vale sozinho; Artilharia no fundo da linha com alguém à frente. Só desenho: o texto vem de `classAuras`.
+ */
+function AuraGrid({ characterClass }: { characterClass: CharacterClass }) {
+  // células na ordem da tela: linha a linha, da esquerda (fundo) para a direita (frente)
+  const self = characterClass === 'ARTILLERY' ? 3 : 4
+  const lit =
+    characterClass === 'EXECUTOR' ? [] : characterClass === 'ARTILLERY' ? [4] : [1, 3, 5, 7]
+  return (
+    <span className="grid grid-cols-3 gap-0.5" aria-hidden>
+      {Array.from({ length: 9 }, (_, i) => (
+        <span
+          key={i}
+          className={cn(
+            'size-3 border transition-all duration-300',
+            i === self
+              ? 'border-(--tone) bg-(--tone)'
+              : lit.includes(i)
+                ? characterClass === 'ARTILLERY'
+                  ? 'border-silver/40 bg-silver/20'
+                  : 'border-(--tone)/30 bg-(--tone)/5 group-hover:border-(--tone)/80 group-hover:bg-(--tone)/35 group-hover:shadow-[0_0_6px_var(--tone)]'
+                : 'border-line bg-bg/40',
+          )}
+          style={lit.includes(i) ? { transitionDelay: `${lit.indexOf(i) * 60}ms` } : undefined}
+        />
+      ))}
+    </span>
+  )
+}
+
+function ClassCard({ characterClass }: { characterClass: CharacterClass }) {
+  const Icon = classIcons[characterClass]
+  return (
+    <HoverCard tone="var(--color-primary-soft)">
+      <Icon className="pointer-events-none absolute -top-2 -right-3 size-20 text-(--tone) opacity-[0.05] transition-all duration-500 ease-out-soft group-hover:rotate-12 group-hover:opacity-[0.12]" />
+      <div className="flex items-start justify-between gap-3">
+        <span className="relative flex size-10 shrink-0 items-center justify-center">
+          <span className="absolute inset-1.5 rotate-45 border border-(--tone)/50 bg-(--tone)/10 transition-transform duration-300 ease-out-soft group-hover:rotate-135" />
+          <Icon className="relative size-4 text-(--tone)" />
+        </span>
+        <AuraGrid characterClass={characterClass} />
+      </div>
+      <p className="mt-3 font-display text-xl leading-tight font-bold uppercase tracking-wide text-silver-bright">{classLabels[characterClass]}</p>
+      <p className="mt-1 text-sm leading-relaxed text-fg-muted transition-colors group-hover:text-fg">{classAuras[characterClass]}</p>
+      <p className="mt-3 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.16em] text-fg-subtle">
+        <Grid3x3 className="size-3" /> frente à direita
+      </p>
+    </HoverCard>
+  )
+}
+
+function TermGrid({ terms, tone }: { terms: { term: string; text: string }[]; tone: string }) {
+  return (
+    <dl className="grid gap-3 md:grid-cols-2">
+      {terms.map((t, i) => (
+        <div
+          key={t.term}
+          style={{ '--tone': tone } as CSSProperties}
+          className="group relative border border-line/60 bg-surface/50 py-3 pr-4 pl-5 transition-all duration-200 hover:border-line-strong hover:bg-surface"
+        >
+          <span className="absolute inset-y-3 left-0 w-0.5 bg-(--tone)/50 transition-all duration-200 group-hover:inset-y-0 group-hover:w-0.75 group-hover:bg-(--tone) group-hover:shadow-[0_0_8px_var(--tone)]" />
+          <dt className="flex items-baseline gap-2.5">
+            <span className="font-mono text-[10px] text-fg-subtle transition-colors group-hover:text-(--tone)">{String(i + 1).padStart(2, '0')}</span>
+            <span className="font-display text-lg font-bold uppercase tracking-wide text-silver-bright">{t.term}</span>
+          </dt>
+          <dd className="mt-1 text-sm leading-relaxed text-fg-muted transition-colors group-hover:text-fg">{t.text}</dd>
+        </div>
+      ))}
+    </dl>
   )
 }

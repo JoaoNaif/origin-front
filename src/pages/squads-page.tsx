@@ -124,24 +124,36 @@ function SquadTab({ squad, index, active, onClick }: { squad: Squad; index: numb
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        'focus-ring chamfer flex w-full items-center gap-3 p-3 text-left [--cut:10px] transition-all duration-150 ease-out-soft',
+        'focus-ring chamfer group relative flex w-full items-center gap-3 overflow-hidden p-3 text-left [--cut:10px] transition-all duration-200 ease-out-soft',
         active
-          ? '[--chamfer-bg:rgb(139_92_246/0.12)] [--chamfer-border:rgb(139_92_246/0.5)]'
-          : '[--chamfer-bg:var(--color-surface)] [--chamfer-border:var(--color-line)] hover:[--chamfer-border:var(--color-line-strong)]',
+          ? '[--chamfer-bg:rgb(139_92_246/0.14)] [--chamfer-border:rgb(167_139_250/0.6)]'
+          : '[--chamfer-bg:var(--color-surface)] [--chamfer-border:var(--color-line)] hover:translate-x-1 hover:[--chamfer-bg:var(--color-raised)] hover:[--chamfer-border:rgb(167_139_250/0.35)]',
       )}
     >
+      {/* faixa de seleção à esquerda */}
+      <span className={cn('absolute inset-y-2 left-0 w-0.75 bg-primary shadow-[0_0_10px_var(--color-primary)] transition-transform duration-200', active ? 'scale-y-100' : 'scale-y-0 group-hover:scale-y-50')} />
       {/* Miniatura da formação (frente à direita) */}
       <span className="grid shrink-0 grid-cols-3 gap-0.5" aria-hidden>
         {[0, 1, 2].flatMap((row) =>
           [2, 1, 0].map((column) => (
-            <span key={`${row}:${column}`} className={cn('size-2', cells.has(`${row}:${column}`) ? 'bg-primary-soft' : 'bg-overlay')} />
+            <span
+              key={`${row}:${column}`}
+              className={cn(
+                'size-2 transition-all duration-200',
+                cells.has(`${row}:${column}`)
+                  ? cn('bg-primary-soft', active ? 'shadow-[0_0_5px_var(--color-primary)]' : 'opacity-70 group-hover:opacity-100')
+                  : 'bg-overlay',
+              )}
+            />
           )),
         )}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate font-display text-lg leading-tight font-bold uppercase tracking-wide text-fg">{squad.name}</span>
+        <span className={cn('block truncate font-display text-lg leading-tight font-bold uppercase tracking-wide transition-colors', active ? 'text-silver-bright' : 'text-fg group-hover:text-silver-bright')}>
+          {squad.name}
+        </span>
       </span>
-      <span className={cn('font-mono text-[10px]', active ? 'text-primary-soft' : 'text-fg-subtle')}>{String(index).padStart(2, '0')}</span>
+      <span className={cn('font-mono text-[10px] transition-colors', active ? 'text-primary-soft' : 'text-fg-subtle group-hover:text-primary-soft')}>{String(index).padStart(2, '0')}</span>
     </button>
   )
 }

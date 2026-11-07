@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
 import { ArrowRight, ChevronRight, History, LayoutGrid, Play, Sparkles, Swords, Users, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
@@ -14,10 +14,15 @@ import {
   useCharacters,
   useSkillOffers,
   useSquads,
+  useTemplates,
   type BattleSummary,
   type Character,
+  type Rarity,
 } from '@/features/game/game-api'
+import { rarityTone } from '@/features/economy/economy-labels'
 import { CharacterPortrait, PortraitPop } from '@/features/game/character-art'
+import { classIcons } from '@/features/game/class-icons'
+import { battleOutcome, outcomeLabels, type BattleOutcome } from '@/features/game/game-labels'
 import { TutorialButton } from '@/features/tutorial/tutorial-button'
 import { cn } from '@/lib/cn'
 
@@ -39,6 +44,7 @@ export function HomePage() {
   const squads = useSquads()
   const battles = useBattles()
   const offers = useSkillOffers()
+  const templates = useTemplates()
 
   const finished = battles.data?.filter((b) => b.status === 'FINISHED') ?? []
   const inProgress = battles.data?.find((b) => b.status === 'IN_PROGRESS')
@@ -184,7 +190,14 @@ export function HomePage() {
           <Carousel label="Elenco" viewportClassName="-mt-10 pt-12">
             {characters.isPending
               ? Array.from({ length: 6 }, (_, i) => <div key={i} className="h-72 w-48 animate-pulse bg-raised" />)
-              : roster.map((character, i) => <RosterCard key={character.id} character={character} index={i + 1} />)}
+              : roster.map((character) => (
+                  <RosterCard
+                    key={character.id}
+                    character={character}
+                    rarity={templates.data?.find((t) => t.key === character.templateKey)?.rarity}
+                    offers={offers.data?.filter((o) => o.characterId === character.id).length ?? 0}
+                  />
+                ))}
           </Carousel>
         </section>
 
@@ -205,11 +218,20 @@ export function HomePage() {
           ) : finished.length === 0 ? (
             <EmptyLog />
           ) : (
-            <BattleLog battles={finished.slice(0, 6)} />
+            <BattleLog battles={finished.slice(0, 6)} form={finished.slice(0, 10)} />
           )}
         </section>
       </div>
     </div>
+  )
+}
+
+/** Entrada em cascata do texto do slide: cada parte com um atraso maior; a saída é imediata e junta. */
+const enterDelays = ['delay-0', 'delay-75', 'delay-150', 'delay-200', 'delay-300']
+function enter(current: boolean, step: number) {
+  return cn(
+    'transition-all ease-out-soft motion-reduce:transition-none',
+    current ? `translate-x-0 opacity-100 duration-700 ${enterDelays[step]}` : '-translate-x-6 opacity-0 duration-300',
   )
 }
 
@@ -264,67 +286,82 @@ function LobbyHero({ slides }: { slides: Slide[] }) {
                 aria-label={`${i + 1} de ${slides.length}: ${slide.name}`}
                 aria-hidden={!current}
                 inert={!current}
-                className={cn(
-                  'flex flex-col justify-center [grid-area:1/1] transition-all duration-500 ease-out-soft',
-                  current ? 'translate-x-0 opacity-100' : 'pointer-events-none -translate-x-6 opacity-0',
-                )}
+                className={cn('flex flex-col justify-center [grid-area:1/1]', !current && 'pointer-events-none')}
               >
-                <div className="flex flex-wrap items-center gap-3">
+                {/* cada parte entra em cascata (o atraso só na entrada; a saída é junta) */}
+                <div className={cn(enter(current, 0), 'flex flex-wrap items-center gap-3')}>
                   <Badge tone="primary">Temporada 0</Badge>
-                  <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-fg-muted">{slide.eyebrow}</span>
+                  <span className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.2em] text-fg-muted">
+                    <span className={cn('h-px bg-primary transition-all duration-700 ease-out-soft', current ? 'w-6' : 'w-0')} />
+                    {slide.eyebrow}
+                  </span>
                 </div>
 
                 <h1 className="mt-5 font-display text-7xl leading-[0.85] font-extrabold uppercase italic text-silver-bright sm:text-8xl xl:text-9xl">
-                  {slide.title[0]}
-                  <br />
-                  <span className="text-gradient-primary pr-3">{slide.title[1]}</span>
+                  <span className={cn(enter(current, 1), 'block')}>{slide.title[0]}</span>
+                  <span className={cn(enter(current, 2), 'block')}>
+                    <span className="text-gradient-primary pr-3">{slide.title[1]}</span>
+                  </span>
                 </h1>
 
-                <p className="mt-6 max-w-md text-[15px] leading-relaxed text-fg-muted">{slide.text}</p>
+                <p className={cn(enter(current, 3), 'mt-6 max-w-md text-[15px] leading-relaxed text-fg-muted')}>{slide.text}</p>
 
-                <div className="mt-8 flex flex-wrap gap-3">{slide.actions}</div>
+                <div className={cn(enter(current, 4), 'mt-8 flex flex-wrap gap-3')}>{slide.actions}</div>
               </div>
             )
           })}
         </div>
 
-        {/* indicadores: número, nome e a barra que enche até a troca */}
+        {/* indicadores: número, nome e a barra que enche até a troca; no hover, a barra acende um pouco */}
         <div className="mt-10 flex items-center gap-4">
           <div className="flex flex-1 gap-2 sm:gap-3">
-            {slides.map((slide, i) => (
-              <button
-                key={slide.key}
-                type="button"
-                onClick={() => go(i)}
-                aria-label={`Ir para ${slide.name}`}
-                aria-current={i === index}
-                className="focus-ring group w-20 text-left sm:w-32"
-              >
-                <span className="flex items-baseline gap-2 font-mono text-[10px] uppercase tracking-[0.18em]">
-                  <span className={i === index ? 'text-primary-soft' : 'text-fg-subtle'}>{String(i + 1).padStart(2, '0')}</span>
+            {slides.map((slide, i) => {
+              const current = i === index
+              return (
+                <button
+                  key={slide.key}
+                  type="button"
+                  onClick={() => go(i)}
+                  aria-label={`Ir para ${slide.name}`}
+                  aria-current={current}
+                  className="focus-ring group w-20 py-1 text-left sm:w-36"
+                >
+                  <span className="flex items-baseline gap-2 font-mono text-[10px] uppercase tracking-[0.18em]">
+                    <span className={cn('transition-colors', current ? 'text-primary-soft' : 'text-fg-subtle group-hover:text-primary-soft')}>
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <span
+                      className={cn(
+                        'hidden truncate transition-all duration-200 sm:inline',
+                        current ? 'text-silver-bright' : 'text-fg-subtle group-hover:translate-x-0.5 group-hover:text-fg',
+                      )}
+                    >
+                      {slide.name}
+                    </span>
+                  </span>
                   <span
                     className={cn(
-                      'hidden truncate transition-colors sm:inline',
-                      i === index ? 'text-silver-bright' : 'text-fg-subtle group-hover:text-fg-muted',
+                      'relative mt-2 block h-[3px] -skew-x-12 overflow-hidden transition-all duration-200',
+                      current ? 'bg-line-strong' : 'bg-line-strong/70 group-hover:h-1 group-hover:bg-line-strong',
                     )}
                   >
-                    {slide.name}
+                    {!current && (
+                      <span className="absolute inset-y-0 left-0 w-0 bg-primary/40 transition-all duration-300 ease-out-soft group-hover:w-1/3" />
+                    )}
+                    {current && (
+                      <span
+                        key={index}
+                        className={cn(
+                          'block h-full origin-left bg-primary shadow-[0_0_8px_var(--color-primary)] motion-safe:animate-slide-progress',
+                          paused && '[animation-play-state:paused]',
+                        )}
+                        onAnimationEnd={() => go(index + 1)}
+                      />
+                    )}
                   </span>
-                </span>
-                <span className="mt-2 block h-[3px] overflow-hidden bg-line-strong">
-                  {i === index && (
-                    <span
-                      key={index}
-                      className={cn(
-                        'block h-full origin-left bg-primary shadow-[0_0_8px_var(--color-primary)] motion-safe:animate-slide-progress',
-                        paused && '[animation-play-state:paused]',
-                      )}
-                      onAnimationEnd={() => go(index + 1)}
-                    />
-                  )}
-                </span>
-              </button>
-            ))}
+                </button>
+              )
+            })}
           </div>
           <div className="flex gap-2">
             <ArrowButton direction="prev" disabled={false} onClick={() => go(index - 1)} />
@@ -350,6 +387,8 @@ function LobbyBackdrop({ arts, index }: { arts: string[]; index: number }) {
           src={art}
           loaded={i === index && !!loaded[art]}
           onLoad={() => setLoaded((l) => ({ ...l, [art]: true }))}
+          // aproxima devagar enquanto o slide está na tela (recomeça a cada volta)
+          className={cn('origin-right', i === index && 'motion-safe:animate-kenburns')}
         />
       ))}
       {/* Sem arte: grade em perspectiva e quadriculado. Com arte: só o necessário para o texto ficar legível. */}
@@ -415,56 +454,79 @@ function StatusTile({ to, icon: Icon, label, title, detail, tone }: {
   detail: string
   tone?: 'primary' | 'warning'
 }) {
+  // cor do cartão: alerta (batalha aberta), roxo (algo pede ação) ou prata (informativo)
+  const color = tone === 'warning' ? 'var(--color-warning)' : tone === 'primary' ? 'var(--color-primary-soft)' : 'var(--color-silver)'
+
   return (
     <Link
       to={to}
+      style={{ '--tone': color } as CSSProperties}
       className={cn(
-        'focus-ring chamfer group flex items-center gap-4 p-4 [--cut:14px]',
-        'backdrop-blur-sm transition-all duration-150 ease-out-soft',
-        tone === 'warning'
-          ? '[--chamfer-bg:rgb(59_40_10/0.85)] [--chamfer-border:rgb(245_165_36/0.45)]'
-          : tone === 'primary'
-            ? '[--chamfer-bg:rgb(34_26_61/0.85)] [--chamfer-border:rgb(139_92_246/0.5)]'
-            : '[--chamfer-bg:rgb(18_18_22/0.85)] [--chamfer-border:var(--color-line)]',
-        'hover:[--chamfer-border:rgb(167_139_250/0.7)]',
+        'focus-ring chamfer group relative flex items-center gap-4 overflow-hidden p-4 pr-5 [--cut:14px]',
+        'backdrop-blur-sm transition-transform duration-300 ease-out-soft hover:-translate-y-1',
+        tone
+          ? '[--chamfer-bg:color-mix(in_srgb,var(--tone)_10%,rgb(18_18_22/0.88))] [--chamfer-border:color-mix(in_srgb,var(--tone)_50%,transparent)]'
+          : '[--chamfer-bg:rgb(18_18_22/0.85)] [--chamfer-border:var(--color-line)]',
+        'hover:[--chamfer-border:color-mix(in_srgb,var(--tone)_85%,transparent)]',
       )}
     >
-      <span
-        className={cn(
-          'flex size-10 shrink-0 items-center justify-center border',
-          tone === 'warning' ? 'border-warning/40 text-warning' : 'border-line-strong text-primary-soft',
-        )}
-      >
-        <Icon className="size-5" />
+      {/* brilho do canto, ícone gigante ao fundo e a linha que corre na base no hover */}
+      <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_90%_at_0%_50%,color-mix(in_srgb,var(--tone)_14%,transparent),transparent)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      <Icon className="pointer-events-none absolute -right-3 -bottom-5 size-24 -rotate-12 text-(--tone) opacity-[0.04] transition-all duration-500 ease-out-soft group-hover:-rotate-3 group-hover:opacity-[0.1]" />
+      <span className="pointer-events-none absolute bottom-0 left-0 h-px w-full origin-left scale-x-0 bg-linear-to-r from-(--tone) to-transparent transition-transform duration-500 ease-out-soft group-hover:scale-x-100" />
+
+      <span className="relative flex size-11 shrink-0 items-center justify-center">
+        <span
+          className={cn(
+            'absolute inset-1.5 rotate-45 border transition-all duration-300 ease-out-soft group-hover:rotate-135',
+            tone ? 'border-(--tone)/60 bg-(--tone)/10 shadow-[0_0_16px_-6px_var(--tone)]' : 'border-line-strong bg-bg/60 group-hover:border-(--tone)/50',
+          )}
+        />
+        <Icon className={cn('relative size-4.5 transition-colors', tone ? 'text-(--tone)' : 'text-fg-muted group-hover:text-silver-bright')} />
       </span>
-      <div className="min-w-0 flex-1">
-        <p className={cn('font-mono text-[10px] uppercase tracking-[0.18em]', tone === 'warning' ? 'text-warning' : 'text-fg-subtle')}>
-          {tone === 'warning' && <span className="mr-1.5 inline-block size-1.5 animate-pulse rounded-pill bg-warning align-middle" />}
+
+      <div className="relative min-w-0 flex-1">
+        <p className={cn('flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em]', tone === 'warning' ? 'text-warning' : 'text-fg-subtle')}>
+          {tone && <span className="inline-block size-1.5 animate-pulse rounded-pill bg-(--tone) shadow-[0_0_6px_var(--tone)]" />}
           {label}
         </p>
-        <p className="truncate font-display text-xl font-bold uppercase tracking-wide text-fg">{title}</p>
+        <p className="truncate font-display text-xl font-bold uppercase tracking-wide text-fg transition-colors group-hover:text-silver-bright">{title}</p>
         <p className="truncate text-xs text-fg-muted">{detail}</p>
       </div>
-      <ChevronRight className="size-4 text-fg-subtle transition-transform group-hover:translate-x-0.5 group-hover:text-primary-soft" />
+
+      <span className="relative flex size-7 shrink-0 items-center justify-center border border-transparent transition-all duration-200 group-hover:border-(--tone)/40 group-hover:bg-(--tone)/10">
+        <ChevronRight className="size-4 text-fg-subtle transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-(--tone)" />
+      </span>
     </Link>
   )
 }
 
-function RosterCard({ character, index }: { character: Character; index: number }) {
+function RosterCard({ character, rarity, offers }: {
+  character: Character
+  rarity?: Rarity
+  /** Blocos de skill esperando a escolha. */
+  offers: number
+}) {
+  const ClassIcon = classIcons[character.characterClass]
   const progress = character.xpToNextLevel ? Math.min(100, (character.xp / character.xpToNextLevel) * 100) : 100
   const [first, ...rest] = character.name.split(' ')
+
+  const tone = rarity ? rarityTone[rarity].color : 'var(--color-line-strong)'
+  const xp = character.xpToNextLevel ? `${character.xp} / ${character.xpToNextLevel} XP` : 'Nível máximo'
 
   return (
     <Link
       to={`/personagens/${character.id}`}
+      aria-label={`${character.name}, ${classLabels[character.characterClass]}, nível ${character.level}${offers ? `, ${offers} ${offers === 1 ? 'bloco' : 'blocos'} de skill` : ''}`}
+      style={{ '--tone': tone } as CSSProperties}
       className={cn(
-        'focus-ring chamfer group flex h-72 w-48 flex-col justify-between p-4 [--cut:16px] hover:z-10 focus-visible:z-10',
+        'focus-ring chamfer group flex h-72 w-48 flex-col justify-end p-4 [--cut:16px] hover:z-10 focus-visible:z-10',
         '[--chamfer-bg:var(--color-surface)] [--chamfer-border:var(--color-line)]',
         'transition-all duration-200 ease-out-soft hover:-translate-y-1 hover:[--chamfer-border:rgb(167_139_250/0.7)]',
         'hover:drop-shadow-[0_10px_24px_rgb(139_92_246/0.35)]',
       )}
     >
-      {/* Retrato de fundo do card inteiro (recortado no chanfro); o texto fica por cima, sobre o degradê */}
+      {/* Retrato de fundo do card inteiro (recortado no chanfro); o texto fica embaixo, sobre o degradê */}
       <div className="pointer-events-none absolute inset-px overflow-hidden [clip-path:var(--chamfer-shape)]">
         <div className="absolute inset-x-6 top-8 bottom-20 rounded-pill bg-primary/10 blur-2xl transition-colors group-hover:bg-primary/25" />
         <CharacterPortrait
@@ -475,27 +537,43 @@ function RosterCard({ character, index }: { character: Character; index: number 
           className="size-full"
           iconClassName="size-14 text-silver/30 transition-colors group-hover:text-primary-soft"
         />
-        <div className="absolute inset-0 bg-linear-to-t from-surface via-surface/60 via-30% to-transparent to-60%" />
-        <div className="absolute inset-x-0 top-0 h-12 bg-linear-to-b from-surface/80 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-surface via-surface/85 via-25% to-transparent to-55%" />
+        {/* raridade: só uma linha fina no topo, na cor dela */}
+        <div className="absolute inset-x-0 top-0 h-0.5 bg-(--tone) opacity-70 shadow-[0_0_10px_var(--tone)] transition-opacity group-hover:opacity-100" />
       </div>
       {/* no hover, o personagem cresce e sai do card */}
       <PortraitPop templateKey={character.templateKey} />
 
-      <div className="relative flex items-center justify-between">
-        <span className="font-mono text-[10px] text-fg-subtle">{String(index).padStart(2, '0')}</span>
-        <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-fg-muted">{classLabels[character.characterClass]}</span>
-      </div>
+      {/* bloco de skill esperando a escolha: só um ícone no canto */}
+      {offers > 0 && (
+        <span
+          title={`${offers} ${offers === 1 ? 'bloco' : 'blocos'} de skill para escolher`}
+          className="chamfer absolute top-3 right-3 flex size-6 items-center justify-center [--chamfer-bg:var(--color-primary)] [--chamfer-border:var(--color-primary-soft)] [--cut:5px] shadow-[0_0_14px_-2px_var(--color-primary)]"
+        >
+          <Sparkles className="size-3.5 text-on-primary motion-safe:animate-pulse" />
+        </span>
+      )}
 
-      <div className="relative space-y-2">
+      <div className="relative space-y-2.5">
+        {/* classe e raridade numa linha só */}
+        <p className="flex items-center justify-between font-mono text-[9px] uppercase tracking-[0.16em] text-fg-subtle">
+          <span className="flex items-center gap-1 transition-colors group-hover:text-fg-muted">
+            <ClassIcon className="size-3" />
+            {classLabels[character.characterClass]}
+          </span>
+          {rarity && <span className="font-display text-sm font-extrabold not-italic tracking-normal text-(--tone)">{rarity}</span>}
+        </p>
+
         <p className="font-display text-2xl leading-[0.95] font-extrabold uppercase italic text-silver-bright">
           {first}
           {/* linha do sobrenome sempre reservada: o LV fica alinhado em todos os cards */}
-          <span className="block min-h-[1lh] text-base font-semibold not-italic text-fg-muted">{rest.join(' ')}</span>
+          <span className="block min-h-lh text-sm font-semibold not-italic tracking-wide text-fg-muted">{rest.join(' ')}</span>
         </p>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-2" title={xp}>
           <span className="font-mono text-[10px] text-primary-soft">LV {character.level}</span>
-          <div className="h-[3px] flex-1 bg-overlay">
-            <div className="h-full bg-gradient-primary" style={{ width: `${progress}%` }} />
+          <div className="h-0.75 flex-1 -skew-x-12 bg-overlay transition-all duration-200 group-hover:h-1">
+            <div className="h-full bg-gradient-primary transition-shadow group-hover:shadow-[0_0_8px_var(--color-primary)]" style={{ width: `${progress}%` }} />
           </div>
         </div>
       </div>
@@ -505,47 +583,78 @@ function RosterCard({ character, index }: { character: Character; index: number 
 
 const dateFormat = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 
-function BattleLog({ battles }: { battles: BattleSummary[] }) {
-  return (
-    <div className="overflow-x-auto border border-line bg-surface/60">
-      <table className="w-full min-w-[560px] text-left">
-        <thead>
-          <tr className="border-b border-line font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">
-            <Th>Resultado</Th>
-            <Th>Adversário</Th>
-            <Th>Dificuldade</Th>
-            <Th className="text-right">Rodadas</Th>
-            <Th className="text-right">Data</Th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-line/70">
-          {battles.map((battle) => {
-            const won = battle.winner === 'PLAYER'
-            return (
-              <tr key={battle.id} className="transition-colors hover:bg-white/[0.02]">
-                <td className="py-3 pr-4 pl-4">
-                  <span className={cn('flex items-center gap-2.5 font-display text-lg font-bold uppercase italic', won ? 'text-success' : 'text-danger')}>
-                    <span className={cn('h-5 w-[3px]', won ? 'bg-success' : 'bg-danger')} />
-                    {won ? 'Vitória' : battle.endReason === 'ABANDON' ? 'Desistência' : 'Derrota'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-sm font-medium text-fg">{battle.opponent.name}</td>
-                <td className="px-4 py-3 text-sm text-fg-muted">{difficultyLabels[battle.opponent.difficulty]}</td>
-                <td className="px-4 py-3 text-right font-mono text-xs text-fg-muted tabular-nums">R{battle.rounds}</td>
-                <td className="px-4 py-3 text-right font-mono text-xs text-fg-subtle tabular-nums">
-                  {battle.finishedAt ? dateFormat.format(new Date(battle.finishedAt)) : '—'}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
-  )
+/** Cor de cada resultado (vitória verde, derrota vermelha, desistência apagada). */
+const outcomeColor: Record<BattleOutcome, string> = {
+  WIN: 'var(--color-success)',
+  LOSS: 'var(--color-danger)',
+  ABANDON: 'var(--color-fg-subtle)',
 }
 
-function Th({ className, children }: { className?: string; children: ReactNode }) {
-  return <th className={cn('px-4 py-2.5 font-medium', className)}>{children}</th>
+/**
+ * Registro de combate do lobby: a forma recente (as últimas batalhas como segmentos, da mais antiga à mais nova) e as
+ * linhas das últimas 6, que acendem na cor do resultado e levam ao Histórico.
+ */
+function BattleLog({ battles, form }: { battles: BattleSummary[]; form: BattleSummary[] }) {
+  const [hovered, setHovered] = useState<string | null>(null)
+  const wins = form.filter((b) => battleOutcome(b) === 'WIN').length
+
+  return (
+    <div className="space-y-4">
+      {/* forma recente */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">
+          Forma recente · <span className="text-success">{wins}V</span> <span className="text-danger">{form.length - wins}D</span>
+        </p>
+        <ul className="flex flex-1 gap-1" aria-label={`Últimas ${form.length} batalhas: ${wins} vitórias`}>
+          {[...form].reverse().map((battle) => {
+            const outcome = battleOutcome(battle)
+            return (
+              <li
+                key={battle.id}
+                title={`${outcomeLabels[outcome]} vs ${battle.opponent.name}`}
+                style={{ '--tone': outcomeColor[outcome] } as CSSProperties}
+                className={cn(
+                  'h-2 max-w-12 flex-1 -skew-x-12 bg-(--tone) transition-all duration-200',
+                  hovered && hovered !== battle.id ? 'opacity-25' : 'opacity-80',
+                  hovered === battle.id && 'scale-y-150 opacity-100 shadow-[0_0_10px_var(--tone)]',
+                )}
+              />
+            )
+          })}
+        </ul>
+      </div>
+
+      <ul className="divide-y divide-line/70 border border-line bg-surface/60" onMouseLeave={() => setHovered(null)}>
+        {battles.map((battle) => {
+          const outcome = battleOutcome(battle)
+          return (
+            <li key={battle.id} onMouseEnter={() => setHovered(battle.id)}>
+              <Link
+                to="/historico"
+                style={{ '--tone': outcomeColor[outcome] } as CSSProperties}
+                className="focus-ring group relative grid grid-cols-[8rem_1fr_auto] items-center gap-4 overflow-hidden py-3 pr-4 pl-4 transition-colors sm:grid-cols-[9rem_1fr_9rem_4rem_7rem_1rem]"
+                onFocus={() => setHovered(battle.id)}
+              >
+                {/* luz na cor do resultado, que entra pela esquerda no hover */}
+                <span className="pointer-events-none absolute inset-y-0 left-0 w-1/2 -translate-x-full bg-linear-to-r from-(--tone)/12 to-transparent transition-transform duration-500 ease-out-soft group-hover:translate-x-0" />
+                <span className="relative flex items-center gap-2.5 font-display text-lg font-bold uppercase italic text-(--tone)">
+                  <span className="h-5 w-0.75 bg-(--tone) transition-all duration-200 group-hover:h-7 group-hover:shadow-[0_0_10px_var(--tone)]" />
+                  {outcomeLabels[outcome]}
+                </span>
+                <span className="relative truncate text-sm font-medium text-fg transition-colors group-hover:text-silver-bright">{battle.opponent.name}</span>
+                <span className="relative hidden text-sm text-fg-muted sm:block">{difficultyLabels[battle.opponent.difficulty]}</span>
+                <span className="relative hidden text-right font-mono text-xs text-fg-muted tabular-nums sm:block">R{battle.rounds}</span>
+                <span className="relative text-right font-mono text-xs text-fg-subtle tabular-nums">
+                  {battle.finishedAt ? dateFormat.format(new Date(battle.finishedAt)) : '—'}
+                </span>
+                <ChevronRight className="relative hidden size-4 -translate-x-1 text-(--tone) opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100 sm:block" />
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
 }
 
 function EmptyLog() {
