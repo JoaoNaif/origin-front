@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { api, apiErrorMessage, httpStatus } from '@/lib/api'
 
 // Contas e sessão (../origin-game/docs/api.md, "Contas e sessão").
@@ -53,14 +54,19 @@ export function accountInitials(displayName = '?') {
     .join('')
 }
 
-/** Sai e limpa o cache; sem conta no /me, o RequireAuth leva para o login. */
+/**
+ * Sai, limpa o cache e vai para o login. A conta vira nula **antes** de limpar: quem já observa o /me (RequireAuth)
+ * recebe na hora. Um clear() antes deixaria esses observadores presos à consulta antiga, ainda com a conta.
+ */
 export function useLogout() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   return useMutation({
     mutationFn: logout,
     onSettled: () => {
-      queryClient.clear()
       queryClient.setQueryData(meQueryKey, null)
+      queryClient.removeQueries({ predicate: (query) => !(query.queryKey.length === 1 && query.queryKey[0] === meQueryKey[0]) })
+      navigate('/login', { replace: true })
     },
   })
 }
