@@ -5,6 +5,7 @@ import type {
   BattleReward,
   BattleSummary,
   CharacterClass,
+  DomPillar,
   Lineage,
   SkillArea,
   SkillEffect,
@@ -56,8 +57,11 @@ export type UnitSkill = {
   baseHitChance: number | null
   isEnhanced: boolean
   effects: SkillEffect[]
-  /** Fora de recarga. */
+  /** Fora de recarga (na de uso único, falso depois de usada). */
   ready: boolean
+  /** Skill única do DOM (D152): uso único, sem Desgaste e sem teste de acerto. */
+  singleUse: boolean
+  domPillar: DomPillar | null
 }
 
 export type BattleUnit = {
@@ -81,6 +85,8 @@ export type BattleUnit = {
   /** Parceiro do Ligado. */
   linkedWith: string | null
   protectedBy: string | null
+  /** Indestrutível do DOM: não leva dano até o próximo turno dele. */
+  invulnerable: boolean
   engaged: boolean
   /** Nulos no inimigo. */
   stats: Record<Stat, number> | null
@@ -114,7 +120,7 @@ export type Battle = {
 
 /** `src/domain/combat/engine/battle-events.ts` no backend. */
 export type BattleEvent =
-  | { type: 'TURN'; ref: string; round: number; tick: number; extra?: boolean }
+  | { type: 'TURN'; ref: string; round: number; tick: number; extra?: boolean; statuses?: StatusType[] }
   | { type: 'SKIP'; ref: string; reason: 'STUN' | 'SLEEP' }
   | { type: 'WOKE'; ref: string }
   | { type: 'CLEANSE'; ref: string; targetRef: string; status: StatusType | null }
@@ -122,12 +128,14 @@ export type BattleEvent =
   | { type: 'SKILL'; ref: string; skillKey: string; potency: number }
   | { type: 'INTERCEPT'; guardianRef: string; protectedRef: string }
   | { type: 'MISS'; ref: string; targetRef: string }
-  | { type: 'DAMAGE'; ref: string; targetRef: string; amount: number; shieldAbsorbed: number; linked?: boolean }
+  | { type: 'DAMAGE'; ref: string; targetRef: string; amount: number; shieldAbsorbed: number; hpLeft?: number; targetStatuses?: StatusType[]; linked?: boolean }
   | { type: 'HEAL' | 'SHIELD' | 'PROTECT' | 'GRANT_TURN'; ref: string; targetRef: string; amount?: number }
   | { type: 'EXPLOIT'; targetRef: string; status: StatusType; consumed: boolean }
   | { type: 'PROTECTED'; protectorRef: string; protectedRef: string }
   | { type: 'RECOVER'; ref: string; targetRef: string; relieved: number }
   | { type: 'MODIFIER'; targetRef: string; stat: Stat; percent: number; result: string }
+  /** Só do front: os 7 MODIFIER seguidos do Rei num alvo viram um (`foldModifiers`). */
+  | { type: 'WEAKEN'; targetRef: string; percent: number; result: string }
   | { type: 'STATUS'; targetRef: string; status: StatusType; result: 'APPLIED' | 'RENEWED' | 'IMMUNE' | 'RESISTED' }
   | { type: 'LOCK'; targetRef: string; skillKey: string }
   | { type: 'MOVE'; ref: string; to: Cell; forced: boolean }
@@ -137,6 +145,8 @@ export type BattleEvent =
   | { type: 'DEFEND'; ref: string }
   | { type: 'PASSIVE'; ref: string; name: string; trigger: string }
   | { type: 'FIELD'; fieldKey: string | null; ref: string | null; untilRound: number | null }
+  /** Indestrutível (DOM): `targetRef` não leva dano até o próximo turno dele. */
+  | { type: 'INVULNERABLE'; ref: string; targetRef: string }
   | { type: 'DEFEATED'; ref: string }
   | { type: 'ROUND_END'; round: number }
   | { type: 'BATTLE_END'; winner: Side; reason: string; round: number }
@@ -157,6 +167,9 @@ export type PreviewEffect =
   | { type: 'RECOVER'; relieved: number }
   | { type: 'CLEANSE'; status: StatusType | null }
   | { type: 'CHANGE_FIELD' | 'PROTECT' | 'GRANT_TURN' | 'EXPLOIT' }
+  // skills únicas do DOM: Rei (−% em todos os stats) e Indestrutível
+  | { type: 'WEAKEN'; percent: number; chance: number }
+  | { type: 'INVULNERABLE' }
 
 export type TurnOption = {
   payload: ActionPayload

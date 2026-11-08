@@ -29,6 +29,7 @@ import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { AwakenedBanner } from '@/features/characters/awakening-ui'
+import { DomChangeBadges } from '@/features/characters/dom-panel'
 import { buttonClasses } from '@/components/ui/button-classes'
 import type { Battle, BattleUnit, Side } from '@/features/battle/battle-api'
 import { displayHp, toneText, type LogIcon, type LogTurn } from '@/features/battle/battle-events'
@@ -418,6 +419,7 @@ export function ResultOverlay({ battle, onClose }: { battle: Battle; onClose: ()
                     <Icon className="size-4 text-silver/60" />
                   )}
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-fg">{unit?.name ?? 'Personagem'}</span>
+                  <DomChangeBadges changes={reward.domChanges} />
                   {reward.awakened && (
                     <Badge tone="primary">
                       <Flame className="size-3" /> Despertou

@@ -5,6 +5,7 @@ import { Page } from '@/components/layout/page'
 import { BannerMeta, PageBanner } from '@/components/layout/page-banner'
 import { Badge } from '@/components/ui/badge'
 import { AwakenedBanner } from '@/features/characters/awakening-ui'
+import { DomChangeBadges } from '@/features/characters/dom-panel'
 import { buttonClasses } from '@/components/ui/button-classes'
 import { rarityTone } from '@/features/economy/economy-labels'
 import { ChestArt, Coins, FragmentDeltaList } from '@/features/economy/economy-ui'
@@ -542,7 +543,7 @@ function SideCard({ title, side, battle }: { title: string; side: 'PLAYER' | 'OP
                 </div>
               </div>
               {ally && (
-                <span className="flex w-20 shrink-0 flex-col items-end gap-0.5">
+                <span className="flex min-w-20 shrink-0 flex-col items-end gap-0.5">
                   {reward ? (
                     <>
                       <span className="font-mono text-xs text-primary-soft tabular-nums">+{reward.xp} XP</span>
@@ -552,6 +553,7 @@ function SideCard({ title, side, battle }: { title: string; side: 'PLAYER' | 'OP
                           {reward.newSkillOffers > 0 && <Sparkles className="size-3" />}
                         </Badge>
                       )}
+                      <DomChangeBadges changes={reward.domChanges} />
                       {reward.awakened && (
                         <Badge tone="primary">
                           <Flame className="size-3" /> Despertou

@@ -100,6 +100,12 @@ export function explainEffect(effect: SkillEffect): string {
       return `O aliado age logo em seguida${effect.attackPercent ? `, com +${effect.attackPercent}% de Ataque nessa ação` : ''}.`
     case 'EXPLOIT':
       return `Em alvo ${statusLabels[effect.status]}, o dano é ×${num(effect.multiplier)}${effect.consume ? ' e o status é consumido' : ''}.`
+    case 'WEAKEN':
+      return `${pct(effect.baseChance)} de base de tirar ${-effect.percent}% de todos os atributos de cada inimigo por ${turns(effect.duration)} dele. A Vontade do alvo resiste.`
+    case 'FORESIGHT':
+      return `O alvo fica Atordoado por ${turns(effect.duration)}. Chance pelo DOM da Mente dele: sem ou básico ${pct(effect.chanceByMind.BASIC)}, intermediário ${pct(effect.chanceByMind.INTERMEDIATE)}, avançado ${pct(effect.chanceByMind.ADVANCED)}.`
+    case 'INVULNERABLE':
+      return 'Anula todo o dano recebido até o próximo turno, inclusive o dano contínuo do início dele.'
   }
 }
 
@@ -123,7 +129,12 @@ function kindOf(effect: SkillEffect): SkillKind {
       // buff aumenta, debuff diminui o stat de quem recebe (o alvo, ou quem usa)
       return effect.percent > 0 ? 'BUFF' : 'DEBUFF'
     case 'APPLY_STATUS':
+    case 'FORESIGHT':
       return 'CONTROL'
+    case 'WEAKEN':
+      return 'DEBUFF'
+    case 'INVULNERABLE':
+      return 'DEFENSE'
     case 'REPOSITION':
       return 'POSITION'
     case 'TURN_SHIFT':

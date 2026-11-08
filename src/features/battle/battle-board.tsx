@@ -325,6 +325,13 @@ function UnitFigure({ side, cell, unit, ghost, active, mark, floats, hitKey, att
         hitKey={hitKey}
         breathDelay={unit ? breathDelay(unit.ref) : 0}
       />
+      {/* Indestrutível (DOM): casca de luz em volta do corpo até o próximo turno dele */}
+      {unit?.invulnerable && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-[20%] top-[2%] bottom-[-2%] rounded-[50%] border-2 border-dom-body/70 bg-dom-body/5 shadow-[0_0_28px_var(--color-dom-body),inset_0_0_22px_var(--color-dom-body)] motion-safe:animate-awaken-pulse"
+        />
+      )}
 
       {unit ? (
         <>
@@ -372,13 +379,18 @@ function UnitFigure({ side, cell, unit, ghost, active, mark, floats, hitKey, att
               </span>
             </span>
             {/* status e condições (o detalhe fica no painel) */}
-            {(unit.statuses.length > 0 || unit.protectedBy || unit.engaged) && (
+            {(unit.statuses.length > 0 || unit.protectedBy || unit.engaged || unit.invulnerable) && (
               <span className="flex flex-wrap justify-center gap-0.5">
                 {unit.statuses.map((s) => (
                   <span key={s} className={cn('px-1 font-mono text-[9px] leading-tight font-bold', statusTone[s])} title={`${statusLabels[s]}: ${statusEffects[s]}`}>
                     {statusShort[s]}
                   </span>
                 ))}
+                {unit.invulnerable && (
+                  <span className="bg-dom-body px-1 font-mono text-[9px] leading-tight font-bold text-bg" title="Indestrutível: não sofre dano até o próximo turno">
+                    IND
+                  </span>
+                )}
                 {unit.protectedBy && <span className="bg-info px-1 font-mono text-[9px] leading-tight font-bold text-bg">PROT</span>}
                 {unit.engaged && (
                   <span className="border border-line-strong bg-bg px-1 font-mono text-[9px] leading-tight font-bold text-fg-muted">ENG</span>
@@ -438,6 +450,8 @@ function UnitInspector({ unit, unitName, base }: {
   const conditions: Condition[] = []
   if (unit.tauntedBy)
     conditions.push({ label: 'Provocado', short: 'PRV', tone: statusTone.TAUNT, text: `por ${unitName(unit.tauntedBy)}: golpes de alvo único só podem mirar quem provocou.` })
+  if (unit.invulnerable)
+    conditions.push({ label: 'Indestrutível', short: 'IND', tone: 'bg-dom-body text-bg', text: 'skill única do DOM: não sofre dano nenhum até o próximo turno dele, nem o dano contínuo do início dele.' })
   if (unit.protectedBy)
     conditions.push({ label: 'Protegido', short: 'PROT', tone: 'bg-info text-bg', text: `por ${unitName(unit.protectedBy)}: golpes de alvo único nele caem no protetor até o próximo turno dele.` })
   if (unit.engaged)

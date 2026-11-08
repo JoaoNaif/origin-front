@@ -130,6 +130,23 @@ manda o nome da variante despertada (só a key), então a ficha mostra só "Desp
 (`awakening-form.tsx`: variante despertada, perfil alto/baixo e pool de missões com uma de cada categoria; tipos em
 `admin-schema.ts`, espelho de `catalog.ts`); a skill de variante despertada pede a referência com `isAwakened`.
 
+## DOM
+
+Visível, é treino (D152): 4 pilares (Mente, Coração, Corpo, Aura) com básico, intermediário e avançado. O personagem traz
+`dom` (nível, pontos na janela, pontos por papel, próximo limiar, piso da perda e título de cada pilar); regras, feitos e
+skills únicas vêm de `GET /dom-rules` (`useDomRules`, com cache): nenhum número escrito à mão. Nomes, ícones e cores em
+`src/features/game/dom-labels.ts` (tokens `dom-*` no `index.css`).
+
+- Ficha: seção 04 `DomPanel` (`dom-panel.tsx`: janela, um cartão por pilar com barra até o próximo nível, marca da perda,
+  papéis do avançado e os feitos) e os títulos no topo. Fim da batalha e Histórico: `DomChangeBadges` (`reward.domChanges`).
+- Batalha: as skills únicas vêm depois das 4 da build (`singleUse`, `domPillar`) e ficam numa faixa fina acima da build
+  (`DomChip` em `action-panel.tsx`: chip em paralelogramo na cor do pilar, de propósito diferente do slot de skill, para
+  não parecer uma 5ª skill; teclas 5 em diante; riscada e "usada" depois de usar). Efeitos `WEAKEN`, `FORESIGHT` e `INVULNERABLE` em
+  `skill-text.ts`; prévia `WEAKEN` e `INVULNERABLE`. `unit.invulnerable` desenha a casca no boneco (`IND`). O golpe anulado
+  vem como `DAMAGE` 0. Os 7 `MODIFIER` do Rei em cada alvo viram um evento só do front (`foldModifiers`, `WEAKEN`).
+- Guia: seção `#dom` (`domTerms` e `DomGuide`). Admin, aba Contas: clicar no personagem abre o editor do DOM
+  (`PUT /admin/characters/:id/dom`, `useSetCharacterDom`).
+
 ## Rodando
 
 - Backend: `npm run start:dev` no `origin-game` (porta 3333).

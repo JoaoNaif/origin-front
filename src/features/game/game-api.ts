@@ -34,6 +34,8 @@ export type Character = {
   awakenedVariantKey: string | null
   /** Única pista do despertar (D151): nunca qual é nem as missões. */
   awakeningHint: AwakeningHint
+  /** DOM (D152): visível, é treino e não segredo. */
+  dom: CharacterDom
   /** Fora de batalha: nível + pontos livres + traços. */
   stats: StatBlock
   freePoints: { allocated: StatBlock; available: number; maxPerStat: StatBlock }
@@ -44,6 +46,50 @@ export type Character = {
 
 /** SILENT = nada; SIGNS = 1 missão oculta cumprida; IMMINENT = 2; AWAKENED = despertou. */
 export type AwakeningHint = 'SILENT' | 'SIGNS' | 'IMMINENT' | 'AWAKENED'
+
+export type DomPillar = 'MIND' | 'HEART' | 'BODY' | 'AURA'
+export type DomLevel = 'BASIC' | 'INTERMEDIATE' | 'ADVANCED'
+export type DomRole = 'DAMAGE' | 'TANK' | 'SUPPORT' | 'CONTROL'
+
+/** Um pilar do DOM na ficha: nível (nulo = sem), pontos na janela (e por papel), o próximo limiar e o piso da perda. */
+export type DomPillarState = {
+  pillar: DomPillar
+  level: DomLevel | null
+  points: number
+  roles: Record<DomRole, number>
+  nextLevel: DomLevel | null
+  /** Nulo no avançado. */
+  nextThreshold: number | null
+  /** Abaixo disso, cai um nível na próxima conferência; nulo sem o pilar. */
+  lossBelow: number | null
+  /** Só no avançado (Vidente, Resiliente, Indestrutível, Rei). */
+  title: string | null
+}
+
+/** Os 4 pilares na ordem MIND, HEART, BODY, AURA; `windowWeight` = peso já jogado na janela (até `window`). */
+export type CharacterDom = { windowWeight: number; pillars: DomPillarState[] }
+
+/** Pilar que subiu ou caiu na batalha (nulo = sem o pilar). */
+export type DomChange = { pillar: DomPillar; from: DomLevel | null; to: DomLevel | null }
+
+/** `GET /dom-rules`: as constantes do servidor, com o texto dos feitos já com os números. */
+export type DomRules = {
+  pillars: {
+    pillar: DomPillar
+    primaryStat: Stat
+    secondaryStat: Stat
+    title: string
+    uniqueSkill: { name: string; description: string }
+    feats: { role: DomRole; description: string }[]
+  }[]
+  levels: { level: DomLevel; threshold: number; thresholdWithoutVariant: number; primaryPercent: number; secondaryPercent: number }[]
+  window: number
+  checkEvery: number
+  lossShare: number
+  advancedRoles: number
+  advancedRolePoints: number
+  pveWeights: Record<AiDifficulty, number>
+}
 
 export type Squad = {
   id: string
@@ -90,6 +136,10 @@ export type SkillEffect = { appliesTo?: 'TARGET' | 'SELF' } & (
   | { type: 'REPOSITION'; kind: 'PUSH' | 'PULL' | 'SWAP' | 'MOVE_ALLY' | 'DASH' }
   | { type: 'TURN_SHIFT'; percent: number }
   | { type: 'CHANGE_FIELD'; duration: number; multiplier: number }
+  // só nas skills únicas do DOM (D152), na batalha: fora do catálogo
+  | { type: 'WEAKEN'; percent: number; duration: number; baseChance: number }
+  | { type: 'FORESIGHT'; duration: number; chanceByMind: Record<DomLevel | 'NONE', number> }
+  | { type: 'INVULNERABLE' }
   | { type: 'RECOVER' | 'PROTECT' | 'CLEANSE' }
   | { type: 'GRANT_TURN'; attackPercent?: number }
   | { type: 'EXPLOIT'; status: StatusType; multiplier: number; consume: boolean }
@@ -252,6 +302,15 @@ export function useFormationBonuses() {
   })
 }
 
+/** Regras do DOM (D152) para a ficha e o Guia; não mudam durante a sessão. */
+export function useDomRules() {
+  return useQuery({
+    queryKey: ['catalog', 'dom-rules'],
+    queryFn: async () => (await api.get<{ domRules: DomRules }>('/dom-rules')).data.domRules,
+    staleTime: Infinity,
+  })
+}
+
 export function useSquads() {
   return useQuery({
     queryKey: ['me', 'squads'],
@@ -289,7 +348,7 @@ export function useDeleteSquad() {
   })
 }
 
-export type BattleReward = { characterId: string; xp: number; levelsGained: number; level: number; newSkillOffers: number; awakened?: boolean }
+export type BattleReward = { characterId: string; xp: number; levelsGained: number; level: number; newSkillOffers: number; awakened?: boolean; domChanges?: DomChange[] }
 
 /** Só o que o histórico usa de `GET /battles/:id` (o resto é da tela de batalha). */
 export type BattleDetail = {

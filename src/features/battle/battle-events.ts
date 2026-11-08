@@ -76,6 +76,9 @@ function describeEvent(event: BattleEvent, ctx: Context): Omit<LogEntry, 'id'> |
     case 'SKILL':
       return { icon: 'skill', text: `Usa ${ctx.skill(event.skillKey)}`, tone: sideTone(ctx, event.ref) }
     case 'DAMAGE':
+      // golpe anulado pelo Indestrutível (DOM): o servidor manda o DAMAGE com 0
+      if (event.amount === 0 && event.shieldAbsorbed === 0)
+        return { icon: 'shield', text: `${ctx.name(event.targetRef)} não sofre nada`, value: 'anulado', tone: 'shield' }
       return {
         icon: 'damage',
         text: `${ctx.name(event.targetRef)} sofre dano${event.linked ? ' pelo elo' : ''}${event.shieldAbsorbed ? ` (${n(event.shieldAbsorbed)} no escudo)` : ''}`,
@@ -85,6 +88,7 @@ function describeEvent(event: BattleEvent, ctx: Context): Omit<LogEntry, 'id'> |
     case 'MISS':
       return { icon: 'miss', text: `${ctx.name(event.targetRef)} esquivou`, value: 'errou', tone: 'muted' }
     case 'DOT':
+      if (event.amount === 0) return { icon: 'shield', text: `${ctx.name(event.ref)} não sofre o dano contínuo`, value: 'anulado', tone: 'shield' }
       return { icon: 'damage', text: `${ctx.name(event.ref)} sofre dano contínuo`, value: `-${n(event.amount)}`, tone: 'damage' }
     case 'HEAL':
       // cura com a vida cheia (passiva de regeneração) não rende linha
@@ -112,6 +116,8 @@ function describeEvent(event: BattleEvent, ctx: Context): Omit<LogEntry, 'id'> |
       return { icon: 'heal', text: `${ctx.name(event.targetRef)} alivia o Desgaste`, tone: 'heal' }
     case 'MODIFIER':
       if (event.result === 'IGNORED') return null
+      if (event.result === 'RESISTED')
+        return { icon: 'resist', text: `${ctx.name(event.targetRef)} resiste a ${statLabels[event.stat]}`, tone: 'muted' }
       return {
         icon: event.percent > 0 ? 'buff' : 'debuff',
         text: `${ctx.name(event.targetRef)}: ${statLabels[event.stat]}`,
@@ -126,6 +132,12 @@ function describeEvent(event: BattleEvent, ctx: Context): Omit<LogEntry, 'id'> |
             tone: 'muted',
           }
         : { icon: 'status', text: `${ctx.name(event.targetRef)} fica ${statusLabels[event.status]}`, tone: 'status' }
+    case 'WEAKEN':
+      return event.result === 'RESISTED'
+        ? { icon: 'resist', text: `${ctx.name(event.targetRef)} resiste ao enfraquecimento`, tone: 'muted' }
+        : { icon: 'debuff', text: `${ctx.name(event.targetRef)}: todos os atributos`, value: `${event.percent}%`, tone: 'warning' }
+    case 'INVULNERABLE':
+      return { icon: 'shield', text: `${ctx.name(event.targetRef)} fica Indestrutível até o próximo turno`, tone: 'shield' }
     case 'LOCK':
       return { icon: 'lock', text: `${ctx.skill(event.skillKey)} de ${ctx.name(event.targetRef)} é travada`, tone: 'status' }
     case 'MOVE':
@@ -154,6 +166,33 @@ function describeEvent(event: BattleEvent, ctx: Context): Omit<LogEntry, 'id'> |
     case 'BATTLE_END':
       return { icon: 'end', text: event.winner === 'PLAYER' ? 'Vitória' : 'Derrota', tone: event.winner === 'PLAYER' ? 'heal' : 'damage' }
   }
+}
+
+const ALL_STATS = 7
+
+/**
+ * Junta os 7 MODIFIER seguidos que a skill do Rei (DOM) põe em cada alvo, um por atributo, num evento só do front
+ * (`WEAKEN`): no registro e na animação ficam uma linha e um número, não sete.
+ */
+export function foldModifiers(events: BattleEvent[]): BattleEvent[] {
+  const out: BattleEvent[] = []
+  for (let i = 0; i < events.length; i++) {
+    const first = events[i]
+    if (first.type === 'MODIFIER') {
+      const run = events.slice(i, i + ALL_STATS)
+      const same =
+        run.length === ALL_STATS &&
+        new Set(run.map((e) => e.type === 'MODIFIER' && e.stat)).size === ALL_STATS &&
+        run.every((e) => e.type === 'MODIFIER' && e.targetRef === first.targetRef && e.percent === first.percent && e.result === first.result)
+      if (same) {
+        out.push({ type: 'WEAKEN', targetRef: first.targetRef, percent: first.percent, result: first.result })
+        i += ALL_STATS - 1
+        continue
+      }
+    }
+    out.push(first)
+  }
+  return out
 }
 
 /** O registro em blocos: um por vez (TURN), com as ações dela em ordem. */
@@ -204,13 +243,36 @@ export function stepUnits(units: BattleUnit[], event: BattleEvent): { units: Bat
   }
 
   switch (event.type) {
+    case 'TURN':
+      // o Indestrutível acaba no começo do próximo turno de quem usou
+      if (!event.extra) patch(event.ref, () => ({ invulnerable: false }))
+      break
     case 'DAMAGE':
+      if (event.amount === 0 && event.shieldAbsorbed === 0) {
+        floats.push({ ref: event.targetRef, text: 'Anulado!', tone: 'shield', big: true })
+        break
+      }
       patch(event.targetRef, (u) => ({ hp: Math.max(0, u.hp - event.amount), shield: Math.max(0, u.shield - event.shieldAbsorbed) }))
       floats.push({ ref: event.targetRef, text: `-${n(event.amount + event.shieldAbsorbed)}`, tone: 'damage' })
       break
     case 'DOT':
       patch(event.ref, (u) => ({ hp: Math.max(0, u.hp - event.amount) }))
-      floats.push({ ref: event.ref, text: `-${n(event.amount)}`, tone: 'damage' })
+      floats.push(
+        event.amount === 0
+          ? { ref: event.ref, text: 'Anulado!', tone: 'shield', big: true }
+          : { ref: event.ref, text: `-${n(event.amount)}`, tone: 'damage' },
+      )
+      break
+    case 'INVULNERABLE':
+      patch(event.targetRef, () => ({ invulnerable: true }))
+      floats.push({ ref: event.targetRef, text: 'Indestrutível!', tone: 'shield', big: true })
+      break
+    case 'WEAKEN':
+      floats.push(
+        event.result === 'RESISTED'
+          ? { ref: event.targetRef, text: 'Resistiu!', tone: 'muted', big: true }
+          : { ref: event.targetRef, text: `Tudo ${event.percent}%`, tone: 'status', big: true },
+      )
       break
     case 'DESGASTE':
       if (event.selfDamage >= 1) {
@@ -240,7 +302,8 @@ export function stepUnits(units: BattleUnit[], event: BattleEvent): { units: Bat
         patch(event.targetRef, (u) => ({ statuses: u.statuses.includes(event.status) ? u.statuses : [...u.statuses, event.status] }))
       break
     case 'MODIFIER':
-      if (event.result !== 'IGNORED')
+      if (event.result === 'RESISTED') floats.push({ ref: event.targetRef, text: 'Resistiu!', tone: 'muted' })
+      else if (event.result !== 'IGNORED')
         floats.push({ ref: event.targetRef, text: `${statLabels[event.stat]} ${event.percent > 0 ? '+' : ''}${event.percent}%`, tone: 'status' })
       break
     case 'MOVE':
@@ -301,6 +364,8 @@ export function stepDelay(event: BattleEvent): number {
     case 'HEAL':
     case 'SHIELD':
     case 'MISS':
+    case 'WEAKEN':
+    case 'INVULNERABLE':
     case 'DEFEATED':
     case 'MOVE':
     case 'DOT':
@@ -334,6 +399,7 @@ export function openingUnits(state: BattleState): BattleUnit[] | null {
     statuses: [],
     tauntedBy: null,
     protectedBy: null,
+    invulnerable: false,
     engaged: false,
   }))
 }

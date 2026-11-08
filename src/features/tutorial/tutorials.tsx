@@ -299,6 +299,7 @@ export const tutorials: Record<TutorialId, Tutorial> = {
               { label: 'Variantes', text: 'A linha abaixo do nome. A linhagem de cada variante decide qual atributo as skills dela desgastam.' },
               { label: 'Nível', text: 'Sobe com a experiência das batalhas e libera pontos de atributo e skills novas.' },
               { label: 'Despertar', text: 'A partir do nível 80, um aviso sob o nome mostra quando o poder começa a mudar. O caminho é secreto.' },
+              { label: 'DOM', text: 'Mais abaixo, os 4 pilares: sobem com feitos em vitórias e caem se você parar. O avançado dá uma skill única.' },
             ]}
           />
         ),
@@ -667,6 +668,7 @@ export const tutorials: Record<TutorialId, Tutorial> = {
               { icon: Crosshair, label: 'Alvo', text: 'Escolhida a skill, as casas que ela alcança acendem. Algumas pedem uma escolha extra no painel.' },
               { label: 'Prévia', text: 'Sobre o alvo, o painel mostra a chance de acerto, a força e o Desgaste da jogada.' },
               { label: 'Recarga', text: 'Skill usada fica alguns turnos esperando, apagada na barra.' },
+              { label: 'DOM', text: 'Quem tem pilar avançado ganha skills únicas numa faixa fina acima das 4 (teclas 5 em diante): uso único, sem Desgaste.' },
             ]}
           />
         ),

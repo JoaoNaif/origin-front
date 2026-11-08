@@ -75,6 +75,12 @@
   --color-lineage-biological: #4ade80;
   --color-lineage-none: #8b8b96;
 
+  /* Pilares do DOM (D152): Mente, Coração, Corpo e Aura */
+  --color-dom-mind: #67e8f9;
+  --color-dom-heart: #f472b6;
+  --color-dom-body: #e2b07a;
+  --color-dom-aura: #ffd166;
+
   /*
    * Arredondamento: quase reto, linguagem de HUD. Para destaque, usar o chanfro (`chamfer`).
    * control = input, célula da grade · card = card, painel · panel = modal, drawer · pill = avatar, ponto

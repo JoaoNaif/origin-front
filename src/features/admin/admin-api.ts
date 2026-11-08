@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import type { Account } from '@/features/auth/auth-api'
-import type { BattleSummary, Character } from '@/features/game/game-api'
+import type { BattleSummary, Character, DomLevel, DomPillar } from '@/features/game/game-api'
 import { api, apiErrorMessage, type ApiErrorBody } from '@/lib/api'
 
 // Rotas de admin (../origin-game/docs/api.md, "Admin"). Todas dão 403 para quem não é ADMIN.
@@ -149,6 +149,24 @@ export function useGrantCharacter(username: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'accounts'] })
       queryClient.invalidateQueries({ queryKey: ['me', 'characters'] })
+    },
+  })
+}
+
+/**
+ * PUT /admin/characters/:id/dom: define o nível de cada pilar (nulo = sem), para testar sem farmar feitos (D152).
+ * A janela não muda e a perda volta a contar do zero.
+ */
+export function useSetCharacterDom(username: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ characterId, pillars }: { characterId: string; pillars: Record<DomPillar, DomLevel | null> }) =>
+      (await api.put<{ character: Character }>(`/admin/characters/${characterId}/dom`, { pillars })).data.character,
+    onSuccess: (character) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'accounts', username, 'characters'] })
+      // se for a própria conta do admin, a ficha e o elenco mudam junto
+      queryClient.invalidateQueries({ queryKey: ['me', 'characters'] })
+      queryClient.invalidateQueries({ queryKey: ['characters', character.id] })
     },
   })
 }

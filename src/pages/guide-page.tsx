@@ -5,6 +5,7 @@ import {
   Coins,
   Compass,
   Crosshair,
+  Crown,
   Flame,
   GraduationCap,
   Grid3x3,
@@ -19,9 +20,10 @@ import { BannerMeta, PageBanner } from '@/components/layout/page-banner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { classIcons } from '@/features/game/class-icons'
-import { classLabels, type CharacterClass, type StatusType } from '@/features/game/game-api'
+import { classLabels, difficultyLabels, useDomRules, type AiDifficulty, type CharacterClass, type StatusType } from '@/features/game/game-api'
+import { domLevelLabels, domPillarColors, domPillarIcons, domPillarLabels, domPillarThemes, domRoleLabels } from '@/features/game/dom-labels'
 import { classAuras, statLabels, statOrder, statShort, statusLabels } from '@/features/game/game-labels'
-import { awakeningTerms, battleTerms, economyTerms, statInfo, statusDetails, statusShort, statusTone } from '@/features/game/glossary'
+import { awakeningTerms, battleTerms, domTerms, economyTerms, statInfo, statusDetails, statusShort, statusTone } from '@/features/game/glossary'
 import { statusEffects } from '@/features/game/skill-text'
 import { useTutorial } from '@/features/tutorial/tutorial-context'
 import { guideTutorials, tutorialIcons, tutorials } from '@/features/tutorial/tutorials'
@@ -36,6 +38,7 @@ const sections: { id: string; label: string; icon: LucideIcon }[] = [
   { id: 'status', label: 'Status', icon: Sparkles },
   { id: 'classes', label: 'Classes', icon: Shield },
   { id: 'batalha', label: 'Batalha', icon: ScrollText },
+  { id: 'dom', label: 'DOM', icon: Crown },
   { id: 'despertar', label: 'Despertar', icon: Flame },
   { id: 'economia', label: 'Economia', icon: Coins },
 ]
@@ -172,13 +175,19 @@ export function GuidePage() {
             <TermGrid terms={battleTerms} tone="var(--color-primary-soft)" />
           </Section>
 
-          {/* 06 Despertar */}
-          <Section id="despertar" index="06" title="Despertar" lead="A evolução secreta do poder, a partir do nível 80.">
+          {/* 06 DOM */}
+          <Section id="dom" index="06" title="DOM" lead="Treino, não segredo: quatro pilares que sobem com feitos em batalha e caem quando você para.">
+            <TermGrid terms={domTerms} tone="var(--color-dom-aura)" />
+            <DomGuide />
+          </Section>
+
+          {/* 07 Despertar */}
+          <Section id="despertar" index="07" title="Despertar" lead="A evolução secreta do poder, a partir do nível 80.">
             <TermGrid terms={awakeningTerms} tone="var(--color-warning)" />
           </Section>
 
-          {/* 07 Economia */}
-          <Section id="economia" index="07" title="Economia" lead="Moeda, fragmentos, baús e aprimoramento: o que você ganha e onde gasta.">
+          {/* 08 Economia */}
+          <Section id="economia" index="08" title="Economia" lead="Moeda, fragmentos, baús e aprimoramento: o que você ganha e onde gasta.">
             <TermGrid terms={economyTerms} tone="var(--color-coin)" />
           </Section>
 
@@ -507,5 +516,88 @@ function TermGrid({ terms, tone }: { terms: { term: string; text: string }[]; to
         </div>
       ))}
     </dl>
+  )
+}
+
+/** Os 4 pilares do DOM (stats, feitos por papel, skill única) e a régua dos níveis, de `GET /dom-rules`. */
+function DomGuide() {
+  const rules = useDomRules()
+  if (rules.isPending) return <div className="h-64 animate-pulse bg-raised" />
+  if (!rules.data) return <p className="text-sm text-fg-subtle">Não foi possível carregar as regras do DOM.</p>
+  const r = rules.data
+  const fmt = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 lg:grid-cols-2">
+        {r.pillars.map((p) => {
+          const Icon = domPillarIcons[p.pillar]
+          return (
+            <HoverCard key={p.pillar} tone={domPillarColors[p.pillar]} watermark={p.title}>
+              <div className="flex items-start gap-3">
+                <span className="relative flex size-11 shrink-0 items-center justify-center">
+                  <span className="absolute inset-1.5 rotate-45 border border-(--tone)/70 bg-(--tone)/15 transition-transform duration-300 group-hover:rotate-135" />
+                  <Icon className="relative size-4.5 text-(--tone)" />
+                </span>
+                <div className="min-w-0">
+                  <p className="font-display text-2xl leading-none font-extrabold uppercase italic text-silver-bright">{domPillarLabels[p.pillar]}</p>
+                  <p className="mt-1 text-xs text-fg-subtle">
+                    {domPillarThemes[p.pillar]} · {statLabels[p.primaryStat]} e {statLabels[p.secondaryStat]}
+                  </p>
+                </div>
+              </div>
+              <ul className="mt-3 space-y-1.5">
+                {p.feats.map((feat) => (
+                  <li key={feat.role} className="text-[13px] leading-snug text-fg-muted">
+                    <span className="mr-2 font-mono text-[10px] font-bold uppercase tracking-widest text-(--tone)">{domRoleLabels[feat.role]}</span>
+                    {feat.description}.
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3 border-l-2 border-(--tone) bg-(--tone)/8 px-3 py-2">
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle">Avançado · título e skill única</p>
+                <p className="font-display text-lg leading-tight font-extrabold uppercase italic text-(--tone)">{p.uniqueSkill.name}</p>
+                <p className="text-xs leading-snug text-fg-muted">{p.uniqueSkill.description}.</p>
+              </div>
+            </HoverCard>
+          )
+        })}
+      </div>
+
+      {/* a régua: pontos e bônus de cada nível */}
+      <div className="hud-corners overflow-x-auto border border-line/60 bg-surface/60 [--hud-color:var(--color-line-strong)]">
+        <table className="w-full min-w-120 text-left text-sm">
+          <thead>
+            <tr className="border-b border-line font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle">
+              <th className="px-4 py-2.5 font-normal">Nível</th>
+              <th className="px-4 py-2.5 font-normal">Pontos</th>
+              <th className="px-4 py-2.5 font-normal">Sem variante</th>
+              <th className="px-4 py-2.5 font-normal">Bônus</th>
+            </tr>
+          </thead>
+          <tbody>
+            {r.levels.map((l) => (
+              <tr key={l.level} className="border-b border-line/50 transition-colors last:border-0 hover:bg-white/[0.02]">
+                <td className="px-4 py-2.5 font-display font-bold uppercase tracking-wide text-silver-bright">{domLevelLabels[l.level]}</td>
+                <td className="px-4 py-2.5 font-mono text-fg tabular-nums">{l.threshold}</td>
+                <td className="px-4 py-2.5 font-mono text-fg-muted tabular-nums">{l.thresholdWithoutVariant}</td>
+                <td className="px-4 py-2.5 text-fg-muted">
+                  +{l.primaryPercent}% principal · +{l.secondaryPercent}% secundário
+                  {l.level === 'ADVANCED' && ` · ${r.advancedRolePoints} pts em ${r.advancedRoles} papéis`}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs leading-relaxed text-fg-subtle">
+        Janela de {r.window} de peso. A cada {r.checkEvery} de peso jogado, o pilar abaixo de {Math.round(r.lossShare * 100)}% dos pontos do
+        nível atual cai um nível. Peso contra a máquina:{' '}
+        {Object.entries(r.pveWeights)
+          .map(([d, w]) => `${difficultyLabels[d as AiDifficulty] ?? d} ${fmt(w)}`)
+          .join(' · ')}
+        .
+      </p>
+    </div>
   )
 }

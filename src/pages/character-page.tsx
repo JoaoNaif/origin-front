@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, type CSSProperties } from 'react'
 import { ArrowLeft, Infinity as InfinityIcon, UserX } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { SectionTitle } from '@/components/layout/page'
@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { buttonClasses } from '@/components/ui/button-classes'
 import { AwakeningCard } from '@/features/characters/awakening-ui'
 import { BuildEditor } from '@/features/characters/build-editor'
+import { DomPanel } from '@/features/characters/dom-panel'
 import { SkillOffers } from '@/features/characters/skill-offers'
 import { StatsPanel } from '@/features/characters/stats-panel'
 import { classIcons } from '@/features/game/class-icons'
@@ -21,6 +22,7 @@ import {
 } from '@/features/game/game-api'
 import { rarityTone } from '@/features/economy/economy-labels'
 import { CharacterPortrait } from '@/features/game/character-art'
+import { domPillarColors, domPillarIcons, domPillarLabels } from '@/features/game/dom-labels'
 import { dangerLabels, lineageLabels, statOrder } from '@/features/game/game-labels'
 import { TutorialButton } from '@/features/tutorial/tutorial-button'
 import { httpStatus } from '@/lib/api'
@@ -83,6 +85,16 @@ export function CharacterPage() {
             <BuildEditor key={data.skills.map((s) => `${s.key}:${s.buildSlot}`).join()} character={data} catalog={catalog} />
           </section>
         </div>
+
+        <section className="space-y-5">
+          <SectionTitle
+            index="04"
+            actions={<span className="font-mono text-[11px] uppercase tracking-[0.15em] text-fg-subtle">Mente · Coração · Corpo · Aura</span>}
+          >
+            DOM
+          </SectionTitle>
+          <DomPanel dom={data.dom} />
+        </section>
       </div>
     </div>
   )
@@ -146,6 +158,23 @@ function Hero({ character, template }: { character: Character; template?: Templa
                 </span>
               )}
               <Badge>Periculosidade {dangerLabels[character.danger]}</Badge>
+              {/* títulos do DOM avançado (Vidente, Resiliente, Indestrutível, Rei) */}
+              {character.dom.pillars
+                .filter((p) => p.title)
+                .map((p) => {
+                  const PillarIcon = domPillarIcons[p.pillar]
+                  return (
+                    <span
+                      key={p.pillar}
+                      style={{ '--tone': domPillarColors[p.pillar] } as CSSProperties}
+                      title={`DOM: ${domPillarLabels[p.pillar]} avançado`}
+                      className="flex items-center gap-1.5 border border-(--tone)/50 bg-(--tone)/10 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-(--tone)"
+                    >
+                      <PillarIcon className="size-3" />
+                      {p.title}
+                    </span>
+                  )
+                })}
             </div>
 
             <h1 className="font-display text-6xl leading-[0.85] font-extrabold uppercase italic text-silver-bright sm:text-7xl xl:text-8xl">

@@ -27,6 +27,7 @@ import {
   eventContext,
   newEvents,
   openingUnits,
+  foldModifiers,
   stepDelay,
   stepUnits,
   toneText,
@@ -66,7 +67,7 @@ type Selection = { turnKey: string | null; mode: Mode; chosen: TurnOption | null
 let floatId = 0
 
 // eventos cujo número também entra na faixa da skill
-const resultEvents = new Set<BattleEvent['type']>(['DAMAGE', 'DOT', 'MISS', 'HEAL', 'SHIELD', 'STATUS', 'DEFEATED'])
+const resultEvents = new Set<BattleEvent['type']>(['DAMAGE', 'DOT', 'MISS', 'HEAL', 'SHIELD', 'STATUS', 'WEAKEN', 'INVULNERABLE', 'DEFEATED'])
 
 const columnNames = ['frente', 'meio', 'fundo']
 const cellLabel = (cell: Cell) => `linha ${cell.row + 1}, ${columnNames[cell.column]}`
@@ -168,7 +169,7 @@ export function BattlePage() {
     const incoming = newEvents(state.events, step.events)
     setSelection({ turnKey: null, mode: null, chosen: null })
     setPlayback({
-      queue: incoming,
+      queue: foldModifiers(incoming),
       index: 0,
       units: state.battle.units,
       activeRef: state.battle.turn?.ref ?? null,
@@ -189,7 +190,7 @@ export function BattlePage() {
     const start = openingUnits(state)
     if (start)
       setPlayback({
-        queue: state.events,
+        queue: foldModifiers(state.events),
         index: 0,
         units: start,
         activeRef: null,
@@ -279,7 +280,7 @@ export function BattlePage() {
     () => (playback ? [...playback.before.events, ...playback.queue.slice(0, playback.index)] : (state?.events ?? [])),
     [playback, state],
   )
-  const log = useMemo(() => buildLog(logEvents, context), [logEvents, context])
+  const log = useMemo(() => buildLog(foldModifiers(logEvents), context), [logEvents, context])
 
   const actor = playerTurn ? units.find((u) => u.ref === state?.battle.turn?.ref) : undefined
 
@@ -518,7 +519,13 @@ function CastBanner({ banner, unit, context }: { banner: Banner; unit?: BattleUn
         )}
       >
         <span className={cn('font-mono text-[10px] uppercase tracking-[0.24em]', accent)}>
-          {banner.kind === 'STUN' ? statusLabels[banner.reason] : ally ? 'Seu ataque' : 'Ataque inimigo'}
+          {banner.kind === 'STUN'
+            ? statusLabels[banner.reason]
+            : banner.skillKey.startsWith('dom:')
+              ? 'Skill única do DOM'
+              : ally
+                ? 'Seu ataque'
+                : 'Ataque inimigo'}
         </span>
         <div className="flex items-center gap-3">
           <Icon className={cn('size-5', accent)} />

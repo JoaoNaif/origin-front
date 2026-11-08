@@ -97,6 +97,14 @@ export const awakeningTerms: { term: string; text: string }[] = [
   { term: 'Skills despertadas', text: 'Mais fortes que as da variante base, com mais Desgaste. Ao despertar, você recebe um bloco de recuperação para cada nível de despertada já atingido.' },
 ]
 
+/** DOM (D152): o que é, em poucas frases. Números exatos vêm de `GET /dom-rules`. */
+export const domTerms: { term: string; text: string }[] = [
+  { term: 'DOM', text: 'Potencial humano, sem poder nenhum: qualquer personagem pode ter. Quatro pilares (Mente, Coração, Corpo e Aura), cada um com básico, intermediário e avançado.' },
+  { term: 'Feitos', text: 'Cada pilar tem um feito por papel (dano, tank, suporte, controle). Cumprir um numa vitória dá pontos naquele pilar. No máximo um por pilar por batalha.' },
+  { term: 'Janela', text: 'Só contam as últimas batalhas. Os pontos são os feitos dentro dela; batalha mais difícil vale mais peso. Quem para de treinar cai de nível.' },
+  { term: 'Avançado', text: 'Dá um título e uma skill única, de uso único por batalha, sem Desgaste. Pede feitos de pelo menos 3 papéis diferentes.' },
+]
+
 /** Termos da economia (Mercado, Baús, aprimoramento; D100, D104, D150). Valores exatos vêm de `GET /economy`. */
 export const economyTerms: { term: string; text: string }[] = [
   { term: 'Moeda (M)', text: 'Vem do fim de toda batalha: vitória dá mais que derrota, adversário difícil rende mais e repetir o mesmo rende menos. Gasta em baús, fragmentos e aprimoramento.' },

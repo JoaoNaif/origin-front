@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { Gift, Loader2, Search } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,9 +10,11 @@ import {
   useAdminAccounts,
   useAdminCatalog,
   useGrantCharacter,
+  useSetCharacterDom,
 } from '@/features/admin/admin-api'
 import { classIcons } from '@/features/game/class-icons'
-import { classLabels, difficultyLabels } from '@/features/game/game-api'
+import { classLabels, difficultyLabels, type Character, type DomLevel, type DomPillar } from '@/features/game/game-api'
+import { domLevelLabels, domLevelRank, domPillarColors, domPillarIcons, domPillarLabels, domPillarOrder } from '@/features/game/dom-labels'
 import { battleOutcome, outcomeLabels } from '@/features/game/game-labels'
 import { cn } from '@/lib/cn'
 
@@ -94,6 +96,8 @@ export function AccountsPanel() {
 function AccountDetail({ username }: { username: string }) {
   const characters = useAccountCharacters(username)
   const battles = useAccountBattles(username)
+  const [editing, setEditing] = useState<string | null>(null)
+  const editingCharacter = characters.data?.find((c) => c.id === editing)
 
   return (
     <div className="space-y-8">
@@ -110,7 +114,17 @@ function AccountDetail({ username }: { username: string }) {
             {characters.data.map((c) => {
               const Icon = classIcons[c.characterClass]
               return (
-                <div key={c.id} className="flex items-center gap-3 rounded-card border border-line bg-surface px-3 py-2.5">
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setEditing(editing === c.id ? null : c.id)}
+                  aria-pressed={editing === c.id}
+                  title="Definir o DOM"
+                  className={cn(
+                    'focus-ring flex items-center gap-3 rounded-card border px-3 py-2.5 text-left transition-colors',
+                    editing === c.id ? 'border-primary bg-primary-dim' : 'border-line bg-surface hover:border-line-strong',
+                  )}
+                >
                   <Icon className="size-4 shrink-0 text-fg-subtle" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-display text-base font-semibold uppercase tracking-wide text-fg">{c.name}</p>
@@ -118,12 +132,16 @@ function AccountDetail({ username }: { username: string }) {
                       {classLabels[c.characterClass]} · {c.templateKey}
                     </p>
                   </div>
-                  <span className="font-mono text-xs text-primary-soft">Nv {c.level}</span>
-                </div>
+                  <span className="flex flex-col items-end gap-0.5">
+                    <span className="font-mono text-xs text-primary-soft">Nv {c.level}</span>
+                    <DomPips character={c} />
+                  </span>
+                </button>
               )
             })}
           </div>
         )}
+        {editingCharacter && <DomEditor key={editingCharacter.id + JSON.stringify(editingCharacter.dom.pillars.map((p) => p.level))} username={username} character={editingCharacter} />}
       </div>
 
       <div className="space-y-4">
@@ -189,6 +207,87 @@ function GrantCharacter({ username, owned }: { username: string; owned: string[]
         {grant.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Gift className="size-3.5" />}
         Dar personagem
       </Button>
+    </div>
+  )
+}
+
+/** Nível de cada pilar em 4 marcas (0 a 3), na cor do pilar. */
+function DomPips({ character }: { character: Character }) {
+  return (
+    <span className="flex gap-1" title="DOM: Mente, Coração, Corpo, Aura">
+      {character.dom.pillars.map((p) => (
+        <span key={p.pillar} className="flex gap-px" style={{ '--tone': domPillarColors[p.pillar] } as CSSProperties}>
+          {[1, 2, 3].map((i) => (
+            <span key={i} className={cn('h-2 w-1', i <= domLevelRank(p.level) ? 'bg-(--tone)' : 'bg-overlay')} />
+          ))}
+        </span>
+      ))}
+    </span>
+  )
+}
+
+const levelOptions: (DomLevel | null)[] = [null, 'BASIC', 'INTERMEDIATE', 'ADVANCED']
+
+/** Define o DOM do personagem (PUT /admin/characters/:id/dom), para testar a ficha e as skills únicas sem farmar feitos. */
+function DomEditor({ username, character }: { username: string; character: Character }) {
+  const initial = Object.fromEntries(character.dom.pillars.map((p) => [p.pillar, p.level])) as Record<DomPillar, DomLevel | null>
+  const [draft, setDraft] = useState(initial)
+  const save = useSetCharacterDom(username)
+  const dirty = domPillarOrder.some((p) => draft[p] !== initial[p])
+
+  return (
+    <div className="hud-corners space-y-4 border border-line bg-surface p-4 [--hud-color:var(--color-primary-soft)]">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="font-display text-lg font-bold uppercase tracking-wide text-silver-bright">DOM de {character.name}</p>
+        <p className="text-xs text-fg-muted">
+          Só para teste. A janela de feitos não muda e a perda volta a contar do zero: sem feitos, o pilar cai com o tempo.
+        </p>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        {domPillarOrder.map((pillar) => {
+          const Icon = domPillarIcons[pillar]
+          return (
+            <div key={pillar} style={{ '--tone': domPillarColors[pillar] } as CSSProperties} className="space-y-2 rounded-control border border-line bg-bg/40 p-3">
+              <p className="flex items-center gap-2 font-display text-base font-bold uppercase tracking-wide text-(--tone)">
+                <Icon className="size-4" /> {domPillarLabels[pillar]}
+              </p>
+              <div role="radiogroup" aria-label={domPillarLabels[pillar]} className="flex flex-wrap gap-1.5">
+                {levelOptions.map((level) => {
+                  const on = draft[pillar] === level
+                  return (
+                    <button
+                      key={level ?? 'none'}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => {
+                        save.reset()
+                        setDraft((d) => ({ ...d, [pillar]: level }))
+                      }}
+                      className={cn(
+                        'focus-ring h-8 rounded-control border px-2.5 text-xs transition-colors',
+                        on ? 'border-(--tone) bg-(--tone)/15 text-silver-bright' : 'border-line bg-bg text-fg-muted hover:border-line-strong hover:text-fg',
+                      )}
+                    >
+                      {level ? domLevelLabels[level] : 'Sem'}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {save.isError && <p className="mr-auto text-xs text-danger">{adminErrorMessage(save.error)}</p>}
+        {save.isSuccess && !dirty && <p className="mr-auto text-xs text-success">DOM salvo.</p>}
+        <Button variant="ghost" size="sm" disabled={!dirty || save.isPending} onClick={() => setDraft(initial)}>
+          Desfazer
+        </Button>
+        <Button size="sm" disabled={!dirty || save.isPending} onClick={() => save.mutate({ characterId: character.id, pillars: draft })}>
+          {save.isPending ? 'Salvando...' : 'Salvar DOM'}
+        </Button>
+      </div>
     </div>
   )
 }
