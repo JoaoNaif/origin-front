@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { ArrowLeftRight, Footprints, Loader2, Shield, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { BattleUnit, Cell, PreviewEffect, TurnOption, UnitSkill } from '@/features/battle/battle-api'
@@ -9,6 +9,7 @@ import { statLabels, statusLabels, tierLabels } from '@/features/game/game-label
 import { SkillKindIcon, SkillShortTags, SkillTags } from '@/features/game/skill-badges'
 import { describeTargeting, explainEffect, skillFacts } from '@/features/game/skill-text'
 import { CharacterPortrait } from '@/features/game/character-art'
+import { domPillarColors, domPillarIcons, domPillarLabels } from '@/features/game/dom-labels'
 import { cn } from '@/lib/cn'
 
 /** O que o jogador está escolhendo: uma skill, mover ou trocar. */
@@ -47,6 +48,10 @@ function describePreview(effect: PreviewEffect): string {
       return 'Age em seguida'
     case 'EXPLOIT':
       return 'Aproveita o status'
+    case 'WEAKEN':
+      return `Todos os atributos ${effect.percent}% · ${percent(effect.chance)}`
+    case 'INVULNERABLE':
+      return 'Anula todo o dano até o próximo turno'
   }
 }
 
@@ -77,83 +82,155 @@ export function ActionBar({ actor, options, loading, mode, chosen, group, busy, 
   const has = (type: TurnOption['payload']['type']) => options.some((o) => o.payload.type === type)
   const defend = options.find((o) => o.payload.type === 'DEFEND')
   const selectedKey = mode?.kind === 'SKILL' ? mode.skillKey : null
+  // a tecla é a posição na lista do servidor: as 4 da build primeiro, as únicas do DOM depois (5 em diante)
+  const slots = actor.skills.map((skill, i) => ({ skill, hotkey: i + 1 }))
+  const build = slots.filter((s) => !s.skill.singleUse)
+  const dom = slots.filter((s) => s.skill.singleUse)
+  // com a faixa do DOM na 1ª linha, o resto vai para a 2ª (senão o auto-posicionamento sobe o card para o lado dela)
+  const row2 = dom.length ? 'lg:row-start-2' : undefined
+
+  const slotProps = (skill: UnitSkill) => ({
+    usable: options.some((o) => o.payload.type === 'SKILL' && o.payload.skillKey === skill.key),
+    active: selectedKey === skill.key,
+    disabled: busy || loading,
+    onHover: () => onHoverSkill(skill.key),
+    onClick: () => onMode(selectedKey === skill.key ? null : { kind: 'SKILL', skillKey: skill.key }),
+  })
+
+  // escolhas extras logo acima da skill escolhida: a jogada só sai com uma delas
+  const extras = (skill: UnitSkill, align: 'left' | 'right') =>
+    selectedKey === skill.key &&
+    chosen &&
+    group.length > 1 && (
+      <ExtraChoices
+        group={group}
+        chosen={chosen}
+        busy={busy}
+        align={align}
+        label={(option) => extraLabel(option, unitName, cellLabel, fieldName)}
+        onChoose={onChoose}
+        onPreview={onPreview}
+      />
+    )
 
   return (
-    <div className="grid gap-3 lg:grid-cols-[13rem_minmax(0,1fr)_9rem]">
-      {/* Quem age */}
-      <div className="chamfer flex items-center gap-3 p-3 [--chamfer-bg:var(--color-primary-dim)] [--chamfer-border:rgb(139_92_246/0.5)] [--cut:12px]">
-        <CharacterPortrait
-          templateKey={actor.templateKey}
-          characterClass={actor.characterClass}
-          zoom={3.2}
-          className="size-12 shrink-0 border border-primary/40 bg-bg"
-          iconClassName="size-5 text-primary-soft"
-        />
-        <div className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary-soft">Sua vez</p>
-          <p className="truncate font-display text-lg leading-tight font-bold uppercase tracking-wide text-silver-bright">{actor.name}</p>
-          <p className="truncate font-mono text-[10px] text-fg-muted">
-            {classLabels[actor.characterClass]} · {displayHp(actor.hp)}/{displayHp(actor.maxHp)} HP
-          </p>
-        </div>
-      </div>
-
-      {/* As 4 skills: em linha a partir de 1536px, 2 x 2 abaixo */}
-      <div className="relative grid content-start gap-2 sm:grid-cols-2 2xl:grid-cols-4" onMouseLeave={() => onHoverSkill(null)}>
-        {actor.skills.map((skill, i) => (
-          <div key={skill.key} className="relative min-w-0">
-            {/* Escolhas extras logo acima da skill: a jogada só sai com uma delas */}
-            {selectedKey === skill.key && chosen && group.length > 1 && (
-              <div
-                className={cn(
-                  'absolute bottom-full z-30 mb-2 w-max max-w-sm min-w-full space-y-2 border border-primary-soft/70 bg-primary-dim p-3 shadow-[0_0_18px_rgb(139_92_246/0.35)]',
-                  i % 2 === 0 ? 'left-0' : 'right-0',
-                )}
-              >
-                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary-soft">Escolha como usar · {group.length} opções</p>
-                <div className="grid max-h-52 gap-1.5 overflow-y-auto">
-                  {group.map((option, j) => (
-                    <button
-                      key={j}
-                      type="button"
-                      onClick={() => onChoose(option)}
-                      onMouseEnter={() => !busy && onPreview(option)}
-                      disabled={busy}
-                      aria-pressed={option === chosen}
-                      className={cn(
-                        'focus-ring rounded-control border px-3 py-2 text-left text-sm font-medium transition-colors disabled:opacity-40',
-                        option === chosen ? 'border-primary-soft bg-primary/25 text-fg' : 'border-line-strong bg-surface text-fg-muted hover:border-primary-soft/60 hover:text-fg',
-                      )}
-                    >
-                      {extraLabel(option, unitName, cellLabel, fieldName)}
-                    </button>
-                  ))}
-                </div>
+    <div className="relative grid gap-x-3 gap-y-2 lg:grid-cols-[13rem_minmax(0,1fr)_9rem]">
+      {/*
+        Skills únicas do DOM: faixa fina acima da build (linha própria, só na coluna das skills), em chips na cor do
+        pilar. Formato diferente de propósito: é um trunfo de uso único, não uma 5ª skill.
+      */}
+      {dom.length > 0 && (
+        <div className="flex min-w-0 items-center gap-3 lg:col-start-2" onMouseLeave={() => onHoverSkill(null)}>
+          <span className="flex shrink-0 items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.24em] text-fg-subtle">
+            <span className="size-1.5 rotate-45 bg-silver/60" />
+            DOM
+            <span className="hidden text-fg-subtle/70 sm:inline">· uso único</span>
+          </span>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            {dom.map(({ skill, hotkey }) => (
+              <div key={skill.key} className="relative">
+                {extras(skill, 'left')}
+                <DomChip skill={skill} hotkey={hotkey} {...slotProps(skill)} />
               </div>
-            )}
-            <SkillSlot
-              skill={skill}
-              hotkey={i + 1}
-              usable={options.some((o) => o.payload.type === 'SKILL' && o.payload.skillKey === skill.key)}
-              active={selectedKey === skill.key}
-              disabled={busy || loading}
-              onHover={() => onHoverSkill(skill.key)}
-              onClick={() => onMode(selectedKey === skill.key ? null : { kind: 'SKILL', skillKey: skill.key })}
-            />
+            ))}
+          </div>
+          <span className="h-px min-w-6 flex-1 bg-linear-to-r from-line-strong to-transparent" />
+        </div>
+      )}
+
+      <ActorCard actor={actor} className={row2} />
+
+      {/* As 4 da build: em linha a partir de 1536px, 2 x 2 abaixo */}
+      <div className={cn('grid content-start gap-2 sm:grid-cols-2 2xl:grid-cols-4', row2)} onMouseLeave={() => onHoverSkill(null)}>
+        {build.map(({ skill, hotkey }, i) => (
+          <div key={skill.key} className="relative min-w-0">
+            {extras(skill, i % 2 === 0 ? 'left' : 'right')}
+            <SkillSlot skill={skill} hotkey={hotkey} {...slotProps(skill)} />
           </div>
         ))}
-        {loading && (
-          <span className="absolute -top-5 right-0 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle">
-            <Loader2 className="size-3.5 animate-spin" /> Lendo opções
-          </span>
-        )}
       </div>
 
       {/* Mover, trocar, defender */}
-      <div className="flex flex-wrap gap-2 lg:flex-col">
+      <div className={cn('flex flex-wrap gap-2 lg:flex-col', row2)}>
         <MinorAction icon={Footprints} label="Mover" hint="½ turno" active={mode?.kind === 'MOVE'} disabled={busy || !has('MOVE')} onClick={() => onMode(mode?.kind === 'MOVE' ? null : { kind: 'MOVE' })} />
         <MinorAction icon={ArrowLeftRight} label="Trocar" hint="aliado" active={mode?.kind === 'SWAP'} disabled={busy || !has('SWAP')} onClick={() => onMode(mode?.kind === 'SWAP' ? null : { kind: 'SWAP' })} />
         {defend && <MinorAction icon={Shield} label="Defender" hint="" active={chosen === defend} disabled={busy} onClick={() => onChoose(defend)} />}
+      </div>
+
+      {loading && (
+        <span className="absolute -top-5 right-0 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle">
+          <Loader2 className="size-3.5 animate-spin" /> Lendo opções
+        </span>
+      )}
+    </div>
+  )
+}
+
+/** Quem age: retrato, nome, classe e a vida em barra. */
+function ActorCard({ actor, className }: { actor: BattleUnit; className?: string }) {
+  const hp = actor.maxHp ? Math.max(0, Math.min(100, (actor.hp / actor.maxHp) * 100)) : 0
+  return (
+    <div title={classLabels[actor.characterClass]} className={cn('chamfer flex items-center gap-3 p-3 [--chamfer-bg:var(--color-primary-dim)] [--chamfer-border:rgb(139_92_246/0.5)] [--cut:12px]', className)}>
+      <CharacterPortrait
+        templateKey={actor.templateKey}
+        characterClass={actor.characterClass}
+        zoom={3.2}
+        className="size-12 shrink-0 border border-primary/40 bg-bg"
+        iconClassName="size-5 text-primary-soft"
+      />
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary-soft">
+          Sua vez
+        </p>
+        <p className="truncate font-display text-lg leading-none font-bold uppercase tracking-wide text-silver-bright">{actor.name}</p>
+        <div className="flex items-center gap-2">
+          <span className="h-1 flex-1 bg-overlay">
+            <span className={cn('block h-full', hp > 50 ? 'bg-success' : hp > 25 ? 'bg-warning' : 'bg-danger')} style={{ width: `${hp}%` }} />
+          </span>
+          <span className="shrink-0 font-mono text-[10px] text-fg-muted tabular-nums">
+            {displayHp(actor.hp)}/{displayHp(actor.maxHp)}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Escolhas extras de uma skill (trocar com, mover para, campo): a jogada sai no clique numa delas. */
+function ExtraChoices({ group, chosen, busy, align, label, onChoose, onPreview }: {
+  group: TurnOption[]
+  chosen: TurnOption
+  busy: boolean
+  align: 'left' | 'right'
+  label: (option: TurnOption) => string
+  onChoose: (option: TurnOption) => void
+  onPreview: (option: TurnOption) => void
+}) {
+  return (
+    <div
+      className={cn(
+        'absolute bottom-full z-30 mb-2 w-max max-w-sm min-w-full space-y-2 border border-primary-soft/70 bg-primary-dim p-3 shadow-[0_0_18px_rgb(139_92_246/0.35)]',
+        align === 'left' ? 'left-0' : 'right-0',
+      )}
+    >
+      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary-soft">Escolha como usar · {group.length} opções</p>
+      <div className="grid max-h-52 gap-1.5 overflow-y-auto">
+        {group.map((option, j) => (
+          <button
+            key={j}
+            type="button"
+            onClick={() => onChoose(option)}
+            onMouseEnter={() => !busy && onPreview(option)}
+            disabled={busy}
+            aria-pressed={option === chosen}
+            className={cn(
+              'focus-ring rounded-control border px-3 py-2 text-left text-sm font-medium transition-colors disabled:opacity-40',
+              option === chosen ? 'border-primary-soft bg-primary/25 text-fg' : 'border-line-strong bg-surface text-fg-muted hover:border-primary-soft/60 hover:text-fg',
+            )}
+          >
+            {label(option)}
+          </button>
+        ))}
       </div>
     </div>
   )
@@ -194,7 +271,7 @@ export function ActionDetail({ actor, mode, chosen, focused, busy, error, hovere
                 ? 'Escolha uma célula vazia da sua grade.'
                 : mode?.kind === 'SWAP'
                   ? 'Escolha o aliado para trocar de lugar.'
-                  : 'Passe o mouse numa skill da barra de baixo para ver o que ela faz. Escolha com 1 a 4 e clique no alvo.'}
+                  : 'Passe o mouse numa skill da barra de baixo para ver o que ela faz. Escolha pela tecla do número e clique no alvo.'}
             </p>
           </div>
         ) : null}
@@ -265,7 +342,7 @@ function SkillSlot({ skill, hotkey, usable, active, disabled, onHover, onClick }
       aria-pressed={active}
       aria-label={`${hotkey}: ${skill.name}${!skill.ready ? ' (em recarga)' : !usable ? ' (sem alvo)' : ''}`}
       className={cn(
-        'focus-ring chamfer relative flex h-19 w-full min-w-0 items-center gap-3 px-3 short:h-16 text-left [--cut:12px] transition-all duration-150 ease-out-soft',
+        '@container focus-ring chamfer relative flex h-19 w-full min-w-0 items-center gap-3 px-3 short:h-16 text-left [--cut:12px] transition-all duration-150 ease-out-soft',
         active
           ? // fundo opaco: o chanfro pinta a borda por baixo, e um fundo translúcido deixaria o roxo claro vazar
             '[--chamfer-bg:var(--color-primary-dim)] [--chamfer-border:var(--color-primary-soft)] drop-shadow-[0_0_14px_rgb(139_92_246/0.45)]'
@@ -297,14 +374,112 @@ function SkillSlot({ skill, hotkey, usable, active, disabled, onHover, onClick }
         </span>
         <SkillShortTags skill={skill} />
       </span>
+      {/* recarga e Desgaste: só quando o slot é largo (container query), para não apertar o nome */}
+      <span className="hidden shrink-0 flex-col items-end gap-1 border-l border-line/70 pl-3 font-mono text-[10px] leading-none text-fg-subtle tabular-nums @[19rem]:flex">
+        <span title="Recarga depois de usar">
+          {skill.cooldown ? (
+            <>
+              <span className="text-fg-muted">{skill.cooldown}</span> {skill.cooldown === 1 ? 'turno' : 'turnos'}
+            </>
+          ) : (
+            'sem recarga'
+          )}
+        </span>
+        <span title="Desgaste ao usar">
+          <span className="text-warning/80">{skill.desgastePercent.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%</span> desg.
+        </span>
+      </span>
     </button>
   )
 }
 
-/** A skill por extenso: papéis, alvo, cada efeito e os dados de uso. */
+/**
+ * Skill única do DOM na faixa acima da build: chip fino em paralelogramo, na cor do pilar (não é um slot como as
+ * skills). Pronta, o losango brilha; escolhida, acende inteira; usada, fica riscada e apagada até o fim.
+ */
+function DomChip({ skill, hotkey, usable, active, disabled, onHover, onClick }: {
+  skill: UnitSkill
+  hotkey: number
+  usable: boolean
+  active: boolean
+  disabled: boolean
+  onHover: () => void
+  onClick: () => void
+}) {
+  const pillar = skill.domPillar ?? 'MIND'
+  const Icon = domPillarIcons[pillar]
+  const used = !skill.ready
+  const off = used || !usable
+  const blocked = disabled || off
+
+  return (
+    <button
+      type="button"
+      onClick={() => !blocked && onClick()}
+      onMouseEnter={onHover}
+      onFocus={onHover}
+      aria-disabled={blocked}
+      aria-pressed={active}
+      aria-label={`${hotkey}: ${skill.name}, skill única do DOM (${domPillarLabels[pillar]})${used ? ', usada' : !usable ? ', sem alvo' : ''}`}
+      style={{ '--tone': domPillarColors[pillar] } as CSSProperties}
+      className={cn('focus-ring group relative flex h-8 items-center outline-offset-4', blocked && 'cursor-not-allowed', off && 'opacity-40 grayscale')}
+    >
+      {/* o fundo inclinado; o conteúdo fica reto por cima */}
+      <span
+        className={cn(
+          'absolute inset-0 -skew-x-[18deg] border transition-all duration-200 ease-out-soft',
+          active
+            ? 'border-(--tone) bg-(--tone)/25 shadow-[0_0_18px_color-mix(in_srgb,var(--tone)_45%,transparent)]'
+            : off
+              ? 'border-line bg-surface/60'
+              : 'border-(--tone)/45 bg-linear-to-r from-(--tone)/15 to-(--tone)/2 group-hover:border-(--tone) group-hover:shadow-[0_0_14px_color-mix(in_srgb,var(--tone)_30%,transparent)]',
+        )}
+      />
+      {/* filete na cor do pilar à esquerda */}
+      {!off && <span className="absolute inset-y-1 left-1 w-0.5 -skew-x-[18deg] bg-(--tone)" />}
+
+      <span className="relative flex items-center gap-2 pr-1.5 pl-4">
+        <span className="relative flex size-4 items-center justify-center">
+          {!off && !active && <span className="absolute inset-0 rotate-45 bg-(--tone)/25 motion-safe:animate-ping [animation-duration:2.4s]" />}
+          <Icon className="relative size-3.5 text-(--tone)" />
+        </span>
+        <span
+          className={cn(
+            'font-display text-sm leading-none font-bold uppercase tracking-wider whitespace-nowrap',
+            active ? 'text-white' : 'text-silver-bright',
+            used && 'line-through decoration-fg-subtle',
+          )}
+        >
+          {skill.name}
+        </span>
+        <span className="font-mono text-[9px] leading-none uppercase tracking-[0.16em] whitespace-nowrap text-(--tone)/80">
+          {used ? 'usada' : !usable ? 'sem alvo' : domPillarLabels[pillar]}
+        </span>
+        <kbd
+          className={cn(
+            'ml-1 flex size-4.5 items-center justify-center border font-mono text-[9px] font-bold',
+            active ? 'border-(--tone) bg-(--tone) text-bg' : 'border-(--tone)/50 bg-bg/80 text-fg',
+          )}
+        >
+          {hotkey}
+        </kbd>
+      </span>
+    </button>
+  )
+}
+
 function SkillDetail({ skill }: { skill: UnitSkill }) {
+  const facts = skill.singleUse ? ['Uso único na batalha', 'Sem Desgaste', 'Sempre acerta'] : skillFacts(skill)
   return (
     <div className="space-y-2">
+      {skill.singleUse && skill.domPillar && (
+        <p
+          style={{ '--tone': domPillarColors[skill.domPillar] } as CSSProperties}
+          className="font-mono text-[10px] uppercase tracking-[0.18em] text-(--tone)"
+        >
+          Skill única do DOM · {domPillarLabels[skill.domPillar]} avançado
+        </p>
+      )}
       <div className="flex items-start gap-3">
         <SkillKindIcon skill={skill} className="size-9" />
         <div className="min-w-0 flex-1 space-y-1">
@@ -312,7 +487,7 @@ function SkillDetail({ skill }: { skill: UnitSkill }) {
             <span className="font-display text-lg leading-tight font-bold uppercase tracking-wide text-silver-bright">{skill.name}</span>
             <TierPips skill={skill} />
             <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-fg-subtle">{tierLabels[skill.tier]}</span>
-            {!skill.ready && <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-warning">Em recarga</span>}
+            {!skill.ready && <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-warning">{skill.singleUse ? 'Usada' : 'Em recarga'}</span>}
           </p>
           <SkillTags skill={skill} />
         </div>
@@ -327,7 +502,7 @@ function SkillDetail({ skill }: { skill: UnitSkill }) {
         ))}
       </ul>
       <p className="flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-[10px] text-fg-subtle">
-        {skillFacts(skill).map((fact) => (
+        {facts.map((fact) => (
           <span key={fact}>{fact}</span>
         ))}
       </p>
