@@ -14,6 +14,7 @@ import type {
   StatBlock,
 } from '@/features/game/game-api'
 import { rangeLabels, statLabels, statusLabels } from '@/features/game/game-labels'
+import type { GearGrade, GearKind, GearLineage } from '@/features/gear/gear-api'
 
 // O que o formulário do admin precisa saber de cada corpo (../origin-game/src/infra/http/schemas/catalog.ts):
 // tipos, nomes em português, explicações e os valores de partida. As regras finas continuam no servidor.
@@ -123,6 +124,24 @@ export type AwakeningBody = {
   missions: { kind: AwakeningMissionKind; threshold: number }[]
 }
 
+/**
+ * Equipamento vivo (D153): grau fixo, linhagem (a passiva), os 2 stats do bônus (percentual ausente = o padrão do grau),
+ * requisitos do elo (quantos o grau pede) e 2 a 5 títulos que existem.
+ */
+export type GearBody = {
+  name: string
+  description: string | null
+  kind: GearKind
+  grade: GearGrade
+  lineage: GearLineage
+  primaryStat: Stat
+  secondaryStat: Stat
+  primaryPercent?: number
+  secondaryPercent?: number
+  requirements: { stat: Stat; level: AwakeningRequirementLevel }[]
+  titles: string[]
+}
+
 /** Categoria e limiar padrão de cada tipo de missão (`awakeningMissionKinds` de `GET /admin/options`). */
 export type AwakeningMissionKinds = Record<AwakeningMissionKind, { category: AwakeningMissionCategory; defaultThreshold: number }>
 
@@ -144,6 +163,13 @@ export type AdminRules = {
   awakeningRequirements?: { min: number; max: number; maxPerLevel: number }
   /** Frações e contagens que algumas missões usam (`damageShare` 0,4...). */
   awakeningMissionRules?: { damageShare: number; supportShare: number; multiKill: number; tripleKill: number; enemyHpShare: number }
+  /** Equipamento vivo: bônus padrão e requisitos por grau, ajuste do admin (fração) e limites dos títulos. */
+  gear?: {
+    statPercents: Record<GearGrade, { primary: number; secondary: number }>
+    adminTuning: number
+    requirementCount: Record<GearGrade, number>
+    titles: { min: number; max: number }
+  }
 }
 
 export const rarityLabels: Record<Rarity, string> = { E: 'E', D: 'D', C: 'C', B: 'B', A: 'A', S: 'S', SS: 'SS' }
@@ -457,6 +483,21 @@ export const emptyBodies: Record<CatalogCollection, () => Record<string, unknown
       { kind: 'TRIPLE_KILL', threshold: 1 },
     ],
   }),
+  // um Escudeiro do seed (Lâmina de Brasa); os percentuais ficam no padrão do grau
+  gear: (): GearBody => ({
+    name: '',
+    description: null,
+    kind: 'WEAPON',
+    grade: 'SQUIRE',
+    lineage: 'ELEMENTAL',
+    primaryStat: 'ATTACK',
+    secondaryStat: 'SPEED',
+    requirements: [
+      { stat: 'ATTACK', level: 'HIGH' },
+      { stat: 'DEFENSE', level: 'LOW' },
+    ],
+    titles: [],
+  }),
 }
 
 /** `key` a partir do nome: sem acento, minúsculas, espaços viram `-` ("Olho de Águia" → "olho-de-aguia"). */
@@ -517,6 +558,12 @@ export const collectionInfo: Record<CatalogCollection, { label: string; singular
     singular: 'despertar',
     example: 'Ex.: Plasma, de Combustão: Ataque e Precisão altos',
     help: 'A evolução de uma variante a partir do nível 80. Cada despertar dá uma variante despertada, tem um perfil (quem combina tem mais chance no sorteio) e um pool de missões ocultas.',
+  },
+  gear: {
+    label: 'Equipamentos',
+    singular: 'equipamento',
+    example: 'Ex.: Lâmina de Brasa, Escudeiro, Elemental',
+    help: 'Armas e armaduras vivas. O grau fixa a força, os requisitos e o preço; a linhagem dá a passiva; o perfil de atributos decide o elo com quem usa. Saem de baú (menos o Divino, que o admin dá na aba Contas).',
   },
 }
 

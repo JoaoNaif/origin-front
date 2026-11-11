@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react'
-import { Gift, Loader2, Search } from 'lucide-react'
+import { Gift, Loader2, Search, Sword } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { SectionTitle } from '@/components/layout/page'
@@ -10,8 +10,11 @@ import {
   useAdminAccounts,
   useAdminCatalog,
   useGrantCharacter,
+  useGrantGear,
   useSetCharacterDom,
 } from '@/features/admin/admin-api'
+import type { GearGrade } from '@/features/gear/gear-api'
+import { gradeLabels, gradeOrder } from '@/features/gear/gear-labels'
 import { classIcons } from '@/features/game/class-icons'
 import { classLabels, difficultyLabels, type Character, type DomLevel, type DomPillar } from '@/features/game/game-api'
 import { domLevelLabels, domLevelRank, domPillarColors, domPillarIcons, domPillarLabels, domPillarOrder } from '@/features/game/dom-labels'
@@ -102,7 +105,15 @@ function AccountDetail({ username }: { username: string }) {
   return (
     <div className="space-y-8">
       <div className="space-y-4">
-        <SectionTitle index="01" actions={characters.data && <GrantCharacter username={username} owned={characters.data.map((c) => c.templateKey)} />}>
+        <SectionTitle
+          index="01"
+          actions={
+            <div className="flex flex-col items-end gap-2">
+              {characters.data && <GrantCharacter username={username} owned={characters.data.map((c) => c.templateKey)} />}
+              <GrantGear username={username} />
+            </div>
+          }
+        >
           Personagens de @{username}
         </SectionTitle>
         {characters.isPending ? (
@@ -206,6 +217,44 @@ function GrantCharacter({ username, owned }: { username: string; owned: string[]
       >
         {grant.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Gift className="size-3.5" />}
         Dar personagem
+      </Button>
+    </div>
+  )
+}
+
+/** Dá um equipamento vivo do catálogo (entra guardado; 400 com o inventário cheio). Serve também para o Divino. */
+function GrantGear({ username }: { username: string }) {
+  const catalog = useAdminCatalog()
+  const grant = useGrantGear(username)
+  const [gearKey, setGearKey] = useState('')
+  const items = [...(catalog.data?.gear ?? [])].sort(
+    (a, b) => gradeOrder.indexOf(a.grade as GearGrade) - gradeOrder.indexOf(b.grade as GearGrade) || a.name.localeCompare(b.name),
+  )
+
+  if (items.length === 0) return null
+
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {grant.isError && <span className="text-xs text-danger">{adminErrorMessage(grant.error)}</span>}
+      {grant.isSuccess && <span className="text-xs text-success">{grant.data.name} entrou no inventário.</span>}
+      <select
+        value={gearKey}
+        onChange={(e) => {
+          grant.reset()
+          setGearKey(e.target.value)
+        }}
+        className="focus-ring h-8 rounded-control border border-line bg-bg px-2 text-sm text-fg"
+      >
+        <option value="">Escolha o equipamento</option>
+        {items.map((g) => (
+          <option key={g.key} value={g.key}>
+            {g.name} ({gradeLabels[g.grade as GearGrade] ?? String(g.grade)})
+          </option>
+        ))}
+      </select>
+      <Button size="sm" variant="secondary" disabled={!gearKey || grant.isPending} onClick={() => grant.mutate(gearKey, { onSuccess: () => setGearKey('') })}>
+        {grant.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Sword className="size-3.5" />}
+        Dar equipamento
       </Button>
     </div>
   )

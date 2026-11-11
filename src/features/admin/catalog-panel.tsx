@@ -19,6 +19,7 @@ import { AwakeningForm } from '@/features/admin/awakening-form'
 import { collectionInfo, emptyBodies, ending, KEY_PATTERN, slugify, type AdminRules, type FormProps } from '@/features/admin/admin-schema'
 import { FieldForm, TraitForm, VariantForm } from '@/features/admin/entry-forms'
 import { Field, Note } from '@/features/admin/form-fields'
+import { GearForm } from '@/features/admin/gear-form'
 import { NpcSquadForm } from '@/features/admin/npc-squad-form'
 import { SkillForm } from '@/features/admin/skill-form'
 import { TemplateForm } from '@/features/admin/template-form'
@@ -35,6 +36,7 @@ const forms = {
   fields: FieldForm,
   'npc-squads': NpcSquadForm,
   awakenings: AwakeningForm,
+  gear: GearForm,
 } as unknown as Record<CatalogCollection, ComponentType<FormProps<Record<string, unknown>>>>
 
 

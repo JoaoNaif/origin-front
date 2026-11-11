@@ -2,11 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import type { Account } from '@/features/auth/auth-api'
 import type { BattleSummary, Character, DomLevel, DomPillar } from '@/features/game/game-api'
+import type { Gear } from '@/features/gear/gear-api'
 import { api, apiErrorMessage, type ApiErrorBody } from '@/lib/api'
 
 // Rotas de admin (../origin-game/docs/api.md, "Admin"). Todas dão 403 para quem não é ADMIN.
 
-export type CatalogCollection = 'variants' | 'traits' | 'templates' | 'skills' | 'fields' | 'npc-squads' | 'awakenings'
+export type CatalogCollection = 'variants' | 'traits' | 'templates' | 'skills' | 'fields' | 'npc-squads' | 'awakenings' | 'gear'
 
 /** Item no formato do corpo da edição (ligações pela `key`) mais os campos só de leitura. */
 export type CatalogItem = { key: string; name: string } & Record<string, unknown>
@@ -21,6 +22,7 @@ export type AdminCatalog = {
   fields: CatalogItem[]
   npcSquads: CatalogItem[]
   awakenings: CatalogItem[]
+  gear: CatalogItem[]
 }
 
 /** Coleção da URL → chave na resposta de `GET /admin/catalog`. */
@@ -32,6 +34,7 @@ export const catalogKeys: Record<CatalogCollection, Exclude<keyof AdminCatalog, 
   fields: 'fields',
   'npc-squads': 'npcSquads',
   awakenings: 'awakenings',
+  gear: 'gear',
 }
 
 /** Campos que o `GET /admin/catalog` traz e o `PUT` ignora. */
@@ -40,6 +43,7 @@ export const readOnlyFields: Partial<Record<CatalogCollection, string[]>> = {
   skills: ['lineage', 'isAwakened', 'templateKey', 'reference'],
   'npc-squads': ['level'],
   awakenings: ['baseVariantKey'],
+  gear: ['saleValue'],
 }
 
 /** Corpo da edição: o item sem a `key` (vai na URL) e sem os campos só de leitura. */
@@ -153,6 +157,16 @@ export function useGrantCharacter(username: string) {
   })
 }
 
+/** POST /admin/accounts/:username/gear: dá um equipamento vivo, guardado no inventário (400 se cheio). */
+export function useGrantGear(username: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (gearKey: string) => (await api.post<{ gear: Gear }>(`/admin/accounts/${username}/gear`, { gearKey })).data.gear,
+    // se for a própria conta do admin, o Arsenal muda junto
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['me', 'gear'] }),
+  })
+}
+
 /**
  * PUT /admin/characters/:id/dom: define o nível de cada pilar (nulo = sem), para testar sem farmar feitos (D152).
  * A janela não muda e a perda volta a contar do zero.
@@ -219,6 +233,9 @@ const fieldNames: Record<string, string> = {
   missions: 'Missão',
   kind: 'Tipo',
   threshold: 'Limiar',
+  grade: 'Grau',
+  titles: 'Títulos',
+  gearKey: 'Equipamento',
 }
 
 const fieldPath = (path: (string | number)[]) =>
