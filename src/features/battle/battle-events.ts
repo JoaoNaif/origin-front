@@ -49,6 +49,8 @@ export function eventContext(battle?: Pick<Battle, 'units' | 'fields'>) {
   return {
     unit: (ref: string) => units.get(ref),
     name: (ref: string) => units.get(ref)?.name ?? ref,
+    /** Nome do equipamento vivo da unidade, se tiver. */
+    gear: (ref: string) => units.get(ref)?.gear?.name,
     skill: (key: string) => skills.get(key) ?? humanize(key),
     field: (key: string | null) => (key ? (fields.get(key) ?? humanize(key)) : 'sem campo'),
   }
@@ -66,7 +68,9 @@ function describeEvent(event: BattleEvent, ctx: Context): Omit<LogEntry, 'id'> |
     case 'ROUND_END':
       return null
     case 'SKIP':
-      return { icon: 'skip', text: `${ctx.name(event.ref)} está ${statusLabels[event.reason]} e perde a vez`, tone: 'status' }
+      return event.reason === 'GEAR'
+        ? { icon: 'skip', text: `${ctx.gear(event.ref) ?? 'O equipamento'} age sozinho: ${ctx.name(event.ref)} perde a vez`, tone: 'status' }
+        : { icon: 'skip', text: `${ctx.name(event.ref)} está ${statusLabels[event.reason]} e perde a vez`, tone: 'status' }
     case 'WOKE':
       return { icon: 'status', text: `${ctx.name(event.ref)} acorda`, tone: 'status' }
     case 'CLEANSE':
@@ -93,7 +97,12 @@ function describeEvent(event: BattleEvent, ctx: Context): Omit<LogEntry, 'id'> |
     case 'HEAL':
       // cura com a vida cheia (passiva de regeneração) não rende linha
       if ((event.amount ?? 0) < 1) return null
-      return { icon: 'heal', text: `${ctx.name(event.targetRef)} recupera HP`, value: `+${n(event.amount ?? 0)}`, tone: 'heal' }
+      return {
+        icon: 'heal',
+        text: event.source === 'GEAR' ? `${ctx.name(event.targetRef)} regenera (${ctx.gear(event.targetRef) ?? 'equipamento'})` : `${ctx.name(event.targetRef)} recupera HP`,
+        value: `+${n(event.amount ?? 0)}`,
+        tone: 'heal',
+      }
     case 'SHIELD':
       return { icon: 'shield', text: `${ctx.name(event.targetRef)} ganha escudo`, value: `+${n(event.amount ?? 0)}`, tone: 'shield' }
     case 'PROTECT':
@@ -124,14 +133,17 @@ function describeEvent(event: BattleEvent, ctx: Context): Omit<LogEntry, 'id'> |
         value: `${event.percent > 0 ? '+' : ''}${event.percent}%`,
         tone: event.percent > 0 ? 'ally' : 'warning',
       }
-    case 'STATUS':
+    case 'STATUS': {
+      // Dano contínuo da Elemental: vem do equipamento de quem bateu
+      const by = event.source === 'GEAR' ? ` (${(event.ref && ctx.gear(event.ref)) ?? 'equipamento'})` : ''
       return event.result === 'RESISTED' || event.result === 'IMMUNE'
         ? {
             icon: 'resist',
-            text: `${ctx.name(event.targetRef)} ${event.result === 'IMMUNE' ? 'está imune a' : 'resiste a'} ${statusLabels[event.status]}`,
+            text: `${ctx.name(event.targetRef)} ${event.result === 'IMMUNE' ? 'está imune a' : 'resiste a'} ${statusLabels[event.status]}${by}`,
             tone: 'muted',
           }
-        : { icon: 'status', text: `${ctx.name(event.targetRef)} fica ${statusLabels[event.status]}`, tone: 'status' }
+        : { icon: 'status', text: `${ctx.name(event.targetRef)} fica ${statusLabels[event.status]}${by}`, tone: 'status' }
+    }
     case 'WEAKEN':
       return event.result === 'RESISTED'
         ? { icon: 'resist', text: `${ctx.name(event.targetRef)} resiste ao enfraquecimento`, tone: 'muted' }
@@ -328,7 +340,7 @@ export function stepUnits(units: BattleUnit[], event: BattleEvent): { units: Bat
       floats.push({ ref: event.ref, text: event.name, tone: 'status' })
       break
     case 'SKIP':
-      floats.push({ ref: event.ref, text: `${statusLabels[event.reason]}!`, tone: 'status', big: true })
+      floats.push({ ref: event.ref, text: event.reason === 'GEAR' ? 'Rebelde!' : `${statusLabels[event.reason]}!`, tone: 'status', big: true })
       break
     case 'WOKE':
       patch(event.ref, (u) => ({ statuses: u.statuses.filter((s) => s !== 'SLEEP') }))

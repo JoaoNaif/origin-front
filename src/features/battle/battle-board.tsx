@@ -1,7 +1,8 @@
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Skull } from 'lucide-react'
-import type { BattleUnit, Cell, Side } from '@/features/battle/battle-api'
+import type { BattleGear, BattleUnit, Cell, Side } from '@/features/battle/battle-api'
+import { bondLabels, gradeColors, gradeLabels, kindIcons, loseActionText, passiveLabels, passiveText, percentEntries, percentsText } from '@/features/gear/gear-labels'
 import { cellId, displayHp, toneText, type Float } from '@/features/battle/battle-events'
 import { CharacterSprite } from '@/features/game/character-art'
 import { scaleOf } from '@/features/game/character-images'
@@ -498,6 +499,8 @@ function UnitInspector({ unit, unitName, base }: {
         ))}
       </span>
 
+      {unit.gear && <GearLine gear={unit.gear} ally={ally} />}
+
       {ally && unit.stats ? (
         <span className="mt-2.5 block border-t border-line/70 pt-2">
           <span className="grid grid-cols-4 gap-x-2 gap-y-1">
@@ -521,7 +524,7 @@ function UnitInspector({ unit, unitName, base }: {
           </span>
           {base && (
             <span className="mt-1.5 block text-[10px] leading-snug text-fg-subtle">
-              Comparado com fora da batalha: inclui campo, auras, buffs, debuffs e Desgaste.
+              Comparado com fora da batalha: inclui campo, auras, buffs, debuffs, Desgaste e a queda do equipamento sem elo pleno.
             </span>
           )}
         </span>
@@ -533,6 +536,35 @@ function UnitInspector({ unit, unitName, base }: {
           </span>
         )
       )}
+    </span>
+  )
+}
+
+/**
+ * Equipamento vivo da unidade (D153): nome, grau e passiva dos dois lados; nas suas, o elo do início da batalha, a queda
+ * e a chance de perder a vez.
+ */
+function GearLine({ gear, ally }: { gear: BattleGear; ally: boolean }) {
+  const Icon = kindIcons[gear.kind]
+  return (
+    <span className="mt-2.5 block space-y-1 border-t border-line/70 pt-2 text-xs leading-snug" style={{ '--tone': gradeColors[gear.grade] } as CSSProperties}>
+      <span className="flex items-center gap-1.5">
+        <Icon className="size-3.5 shrink-0 text-(--tone)" />
+        <span className="min-w-0 flex-1 truncate font-semibold text-fg">{gear.name}</span>
+        <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-(--tone)">{gradeLabels[gear.grade]}</span>
+        {ally && gear.bond && (
+          <span className={cn('font-mono text-[9px] font-bold uppercase', gear.bond === 'FULL' ? 'text-success' : gear.bond === 'PARTIAL' ? 'text-warning' : 'text-danger-hover')}>
+            {bondLabels[gear.bond]}
+          </span>
+        )}
+      </span>
+      <span className="block text-fg-muted">
+        <span className="font-semibold text-fg">{passiveLabels[gear.passive.type]}</span>: {passiveText(gear.passive)}.
+      </span>
+      {ally && gear.penaltyPercents && percentEntries(gear.penaltyPercents).length > 0 && (
+        <span className="block text-danger-hover">Queda na batalha: {percentsText(gear.penaltyPercents)}.</span>
+      )}
+      {ally && gear.loseAction && <span className="block text-[11px] text-fg-subtle">Age sozinho: {loseActionText(gear.loseAction)}.</span>}
     </span>
   )
 }

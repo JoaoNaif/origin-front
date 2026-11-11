@@ -16,6 +16,7 @@ import type {
   StatusType,
 } from '@/features/game/game-api'
 import type { BattleLoot } from '@/features/economy/economy-api'
+import type { GearEffects, GearGrade, GearKind, GearLineage } from '@/features/gear/gear-api'
 import { api } from '@/lib/api'
 
 // Batalha PvE (../origin-game/docs/api.md, "Batalhas"). O servidor é a autoridade (D9): a tela só mostra o estado,
@@ -92,7 +93,18 @@ export type BattleUnit = {
   stats: Record<Stat, number> | null
   /** Do inimigo, só as já vistas. */
   skills: UnitSkill[]
+  /** Equipamento vivo (D153); nulo sem, ausente em batalha antiga. */
+  gear?: BattleGear | null
 }
+
+/** O equipamento na batalha: o item e a passiva dos dois lados; o elo e o efeito inteiro, só nas suas unidades. */
+export type BattleGear = Pick<GearEffects, 'passive'> & {
+  key: string
+  name: string
+  kind: GearKind
+  grade: GearGrade
+  lineage: GearLineage
+} & Partial<Omit<GearEffects, 'passive'>>
 
 export type Battle = {
   id: string
@@ -121,7 +133,8 @@ export type Battle = {
 /** `src/domain/combat/engine/battle-events.ts` no backend. */
 export type BattleEvent =
   | { type: 'TURN'; ref: string; round: number; tick: number; extra?: boolean; statuses?: StatusType[] }
-  | { type: 'SKIP'; ref: string; reason: 'STUN' | 'SLEEP' }
+  /** `GEAR`: o equipamento vivo agiu sozinho (elo parcial ou sem elo). */
+  | { type: 'SKIP'; ref: string; reason: 'STUN' | 'SLEEP' | 'GEAR' }
   | { type: 'WOKE'; ref: string }
   | { type: 'CLEANSE'; ref: string; targetRef: string; status: StatusType | null }
   | { type: 'DOT'; ref: string; amount: number }
@@ -129,14 +142,16 @@ export type BattleEvent =
   | { type: 'INTERCEPT'; guardianRef: string; protectedRef: string }
   | { type: 'MISS'; ref: string; targetRef: string }
   | { type: 'DAMAGE'; ref: string; targetRef: string; amount: number; shieldAbsorbed: number; hpLeft?: number; targetStatuses?: StatusType[]; linked?: boolean }
-  | { type: 'HEAL' | 'SHIELD' | 'PROTECT' | 'GRANT_TURN'; ref: string; targetRef: string; amount?: number }
+  /** `source: 'GEAR'`: regeneração do equipamento (Biológica). */
+  | { type: 'HEAL' | 'SHIELD' | 'PROTECT' | 'GRANT_TURN'; ref: string; targetRef: string; amount?: number; source?: 'GEAR' }
   | { type: 'EXPLOIT'; targetRef: string; status: StatusType; consumed: boolean }
   | { type: 'PROTECTED'; protectorRef: string; protectedRef: string }
   | { type: 'RECOVER'; ref: string; targetRef: string; relieved: number }
   | { type: 'MODIFIER'; targetRef: string; stat: Stat; percent: number; result: string }
   /** Só do front: os 7 MODIFIER seguidos do Rei num alvo viram um (`foldModifiers`). */
   | { type: 'WEAKEN'; targetRef: string; percent: number; result: string }
-  | { type: 'STATUS'; targetRef: string; status: StatusType; result: 'APPLIED' | 'RENEWED' | 'IMMUNE' | 'RESISTED' }
+  /** `source: 'GEAR'`: Dano contínuo do equipamento de quem bateu (Elemental). */
+  | { type: 'STATUS'; ref?: string; targetRef: string; status: StatusType; result: 'APPLIED' | 'RENEWED' | 'IMMUNE' | 'RESISTED'; source?: 'GEAR' }
   | { type: 'LOCK'; targetRef: string; skillKey: string }
   | { type: 'MOVE'; ref: string; to: Cell; forced: boolean }
   | { type: 'MOVE_BLOCKED'; ref: string; reason: 'RESISTED' | 'BLOCKED' }

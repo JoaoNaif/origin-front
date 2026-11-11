@@ -60,7 +60,7 @@ type Playback = {
 }
 
 /** "X usa Y" com o que a skill fez em quem (cresce a cada evento), ou o aviso de quem perdeu a vez atordoado. */
-type Banner = { id: number; ref: string } & ({ kind: 'SKILL'; skillKey: string; results: Omit<Float, 'id' | 'big'>[] } | { kind: 'STUN'; reason: 'STUN' | 'SLEEP' })
+type Banner = { id: number; ref: string } & ({ kind: 'SKILL'; skillKey: string; results: Omit<Float, 'id' | 'big'>[] } | { kind: 'STUN'; reason: 'STUN' | 'SLEEP' | 'GEAR' })
 
 type Selection = { turnKey: string | null; mode: Mode; chosen: TurnOption | null }
 
@@ -284,9 +284,9 @@ export function BattlePage() {
 
   const actor = playerTurn ? units.find((u) => u.ref === state?.battle.turn?.ref) : undefined
 
-  // Stats fora da batalha: o painel da unidade compara com os atuais
+  // Stats fora da batalha (com o bônus do equipamento, como na ficha): o painel da unidade compara com os atuais
   const characters = useCharacters()
-  const baseStats = useMemo(() => new Map(characters.data?.map((c) => [c.id, c.stats])), [characters.data])
+  const baseStats = useMemo(() => new Map(characters.data?.map((c) => [c.id, c.gear?.stats ?? c.stats])), [characters.data])
 
   // Teclado: 1 a 4 escolhem a skill, Esc cancela. useEffectEvent: lê sempre a vez mais recente
   const onKey = useEffectEvent((e: KeyboardEvent) => {
@@ -520,7 +520,9 @@ function CastBanner({ banner, unit, context }: { banner: Banner; unit?: BattleUn
       >
         <span className={cn('font-mono text-[10px] uppercase tracking-[0.24em]', accent)}>
           {banner.kind === 'STUN'
-            ? statusLabels[banner.reason]
+            ? banner.reason === 'GEAR'
+              ? `${unit.gear?.name ?? 'Equipamento vivo'} age sozinho`
+              : statusLabels[banner.reason]
             : banner.skillKey.startsWith('dom:')
               ? 'Skill única do DOM'
               : ally
