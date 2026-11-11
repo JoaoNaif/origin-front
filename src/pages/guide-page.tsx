@@ -13,8 +13,14 @@ import {
   ScrollText,
   Shield,
   Sparkles,
+  Sword,
   type LucideIcon,
 } from 'lucide-react'
+import { useGearRules, type GearLineage } from '@/features/gear/gear-api'
+import { fmt, gradeColors, gradeLabels, lineageCostTarget, loseActionText, passiveLabels, passiveText, percentsText } from '@/features/gear/gear-labels'
+import { GradeTag } from '@/features/gear/gear-ui'
+import { fragmentTone } from '@/features/economy/economy-labels'
+import { lineageLabels } from '@/features/game/game-labels'
 import { useLocation } from 'react-router-dom'
 import { BannerMeta, PageBanner } from '@/components/layout/page-banner'
 import { Badge } from '@/components/ui/badge'
@@ -23,7 +29,7 @@ import { classIcons } from '@/features/game/class-icons'
 import { classLabels, difficultyLabels, useDomRules, type AiDifficulty, type CharacterClass, type StatusType } from '@/features/game/game-api'
 import { domLevelLabels, domPillarColors, domPillarIcons, domPillarLabels, domPillarThemes, domRoleLabels } from '@/features/game/dom-labels'
 import { classAuras, statLabels, statOrder, statShort, statusLabels } from '@/features/game/game-labels'
-import { awakeningTerms, battleTerms, domTerms, economyTerms, statInfo, statusDetails, statusShort, statusTone } from '@/features/game/glossary'
+import { awakeningTerms, battleTerms, domTerms, economyTerms, gearTerms, statInfo, statusDetails, statusShort, statusTone } from '@/features/game/glossary'
 import { statusEffects } from '@/features/game/skill-text'
 import { useTutorial } from '@/features/tutorial/tutorial-context'
 import { guideTutorials, tutorialIcons, tutorials } from '@/features/tutorial/tutorials'
@@ -40,6 +46,7 @@ const sections: { id: string; label: string; icon: LucideIcon }[] = [
   { id: 'batalha', label: 'Batalha', icon: ScrollText },
   { id: 'dom', label: 'DOM', icon: Crown },
   { id: 'despertar', label: 'Despertar', icon: Flame },
+  { id: 'equipamento', label: 'Equipamento', icon: Sword },
   { id: 'economia', label: 'Economia', icon: Coins },
 ]
 
@@ -186,8 +193,14 @@ export function GuidePage() {
             <TermGrid terms={awakeningTerms} tone="var(--color-warning)" />
           </Section>
 
-          {/* 08 Economia */}
-          <Section id="economia" index="08" title="Economia" lead="Moeda, fragmentos, baús e aprimoramento: o que você ganha e onde gasta.">
+          {/* 08 Equipamento */}
+          <Section id="equipamento" index="08" title="Equipamento vivo" lead="Armas e armaduras que escolhem quem as usa. O elo decide se ajudam ou atrapalham.">
+            <TermGrid terms={gearTerms} tone="var(--color-grade-king)" />
+            <GearGuide />
+          </Section>
+
+          {/* 09 Economia */}
+          <Section id="economia" index="09" title="Economia" lead="Moeda, fragmentos, baús e aprimoramento: o que você ganha e onde gasta.">
             <TermGrid terms={economyTerms} tone="var(--color-coin)" />
           </Section>
 
@@ -516,6 +529,74 @@ function TermGrid({ terms, tone }: { terms: { term: string; text: string }[]; to
         </div>
       ))}
     </dl>
+  )
+}
+
+/** Passivas por linhagem e a régua dos graus do equipamento vivo, de `GET /gear-rules`. */
+function GearGuide() {
+  const rules = useGearRules()
+  if (rules.isPending) return <div className="h-64 animate-pulse bg-raised" />
+  if (!rules.data) return <p className="text-sm text-fg-subtle">Não foi possível carregar as regras do equipamento.</p>
+  const r = rules.data.gearRules
+  const pct = (n: number) => `${fmt(n * 100)}%`
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {(Object.entries(r.lineagePassives) as [GearLineage, (typeof r.lineagePassives)[GearLineage]][]).map(([lineage, passive]) => (
+          <HoverCard key={lineage} tone={fragmentTone[lineage].color} watermark={lineageLabels[lineage]}>
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-(--tone)">{lineageLabels[lineage]}</p>
+            <p className="font-display text-xl leading-tight font-bold uppercase tracking-wide text-silver-bright">{passiveLabels[passive.type]}</p>
+            <p className="mt-1 text-sm leading-relaxed text-fg-muted transition-colors group-hover:text-fg">{passiveText(passive)}.</p>
+            <p className="mt-2 font-mono text-[10px] text-fg-subtle">Custo do elo pleno no {lineageCostTarget[lineage]}</p>
+          </HoverCard>
+        ))}
+      </div>
+
+      <div className="hud-corners overflow-x-auto border border-line/60 bg-surface/60 [--hud-color:var(--color-line-strong)]">
+        <table className="w-full min-w-200 text-left text-sm">
+          <thead>
+            <tr className="border-b border-line font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle">
+              <th className="px-4 py-2.5 font-normal">Grau</th>
+              <th className="px-4 py-2.5 font-normal">Bônus</th>
+              <th className="px-4 py-2.5 font-normal">Pede</th>
+              <th className="px-4 py-2.5 font-normal">Custo pleno</th>
+              <th className="px-4 py-2.5 font-normal">Parcial</th>
+              <th className="px-4 py-2.5 font-normal">Sem elo</th>
+              <th className="px-4 py-2.5 font-normal">Venda</th>
+            </tr>
+          </thead>
+          <tbody>
+            {r.grades.map((g) => (
+              <tr key={g.grade} className="border-b border-line/50 align-top transition-colors last:border-0 hover:bg-white/[0.02]" style={{ '--tone': gradeColors[g.grade] } as CSSProperties}>
+                <td className="px-4 py-2.5">
+                  <GradeTag grade={g.grade} />
+                  {g.rarity && <span className="mt-1 block font-mono text-[10px] text-fg-subtle">baú ≈ {g.rarity}</span>}
+                </td>
+                <td className="px-4 py-2.5 font-mono text-xs text-fg tabular-nums">
+                  +{fmt(g.statPercents.primary)}% / +{fmt(g.statPercents.secondary)}%
+                </td>
+                <td className="px-4 py-2.5 font-mono text-xs text-fg-muted">{g.requirements}</td>
+                <td className="px-4 py-2.5 font-mono text-xs text-fg-muted">{fmt(g.fullBondCostPercent)}%</td>
+                {[g.partial, g.none].map((p, i) => (
+                  <td key={i} className="px-4 py-2.5 text-xs text-fg-muted">
+                    <span className="text-danger-hover">{percentsText(p.statPercents)}</span>
+                    {p.loseAction && <span className="mt-0.5 block text-[11px] text-fg-subtle">{loseActionText(p.loseAction)}</span>}
+                  </td>
+                ))}
+                <td className="px-4 py-2.5 font-mono text-xs text-fg-muted">{g.saleValue === null ? 'não se vende' : `${fmt(g.saleValue)} M`}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs leading-relaxed text-fg-subtle">
+        As passivas acima são as do {gradeLabels.KING} com elo pleno; cada grau multiplica ({r.grades.map((g) => `${gradeLabels[g.grade]} ×${fmt(g.passiveFactor)}`).join(' · ')}). Bônus e
+        passiva valem {pct(r.bondFactor.FULL)} no pleno, {pct(r.bondFactor.PARTIAL)} no parcial e {pct(r.bondFactor.NONE)} sem elo. Personagem sem
+        variante recebe o bônus de atributos ×{fmt(r.noVariantBonus)}. Inventário: {r.inventory.initial} espaços, +{r.inventory.step} por compra, até{' '}
+        {r.inventory.max}.
+      </p>
+    </div>
   )
 }
 

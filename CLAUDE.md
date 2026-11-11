@@ -42,6 +42,7 @@ Fontes gratuitas (OFL): Barlow Condensed (`font-display`, títulos e botões), I
   - `banner-explosao.jpg`: topo de Batalhar (`PLAY_ART` em `play-page.tsx`).
   - `banner-adagas.jpg`: topo de Histórico (`HISTORY_ART` em `history-page.tsx`).
   - `banner-lanca.jpg`: slide Personagens do lobby e topo de Minha conta (`ACCOUNT_ART` em `account-page.tsx`).
+  - `banner-arsenal.jpg`: topo do Arsenal (`GEAR_ART` em `gear-page.tsx`; sem arquivo, fica a grade).
   - Topo das páginas do hub com arte: `PageBanner` (`src/components/layout/page-banner.tsx`). A arte aparece **inteira**,
     sem recorte (`BannerArt`: altura do banner, largura na proporção, colada à direita, borda esquerda sumindo no fundo);
     o lobby usa o mesmo `BannerArt`.
@@ -146,6 +147,27 @@ skills únicas vêm de `GET /dom-rules` (`useDomRules`, com cache): nenhum núme
   vem como `DAMAGE` 0. Os 7 `MODIFIER` do Rei em cada alvo viram um evento só do front (`foldModifiers`, `WEAKEN`).
 - Guia: seção `#dom` (`domTerms` e `DomGuide`). Admin, aba Contas: clicar no personagem abre o editor do DOM
   (`PUT /admin/characters/:id/dom`, `useSetCharacterDom`).
+
+## Equipamento vivo
+
+Armas e armaduras vivas (D94, D153), um slot por personagem. Rotas e tipos em `src/features/gear/gear-api.ts`; nomes,
+cores e textos em `gear-labels.ts` (tokens `grade-*` no `index.css`, a cor da raridade equivalente); peças em `gear-ui.tsx`
+(`GearEmblem`, sem arquivo de arte: o ícone do tipo na cor do grau; `GradeTag`, `BondBadge`, `RequirementChips`,
+`BondDetails`). **O elo e o efeito vêm prontos do servidor** (`bond.effects`); regras e catálogo de `GET /gear-rules`
+(`useGearRules`, com cache): nenhum número escrito à mão.
+
+- `/arsenal` (`gear-page.tsx`, grupo Coleção da barra): inventário com a compra de +5 espaços, filtro, e o detalhe do item
+  com o elo de cada personagem (`GET /gear/:id/bonds`), equipar, tirar e vender (com confirmação). `?item=` escolhe o item.
+- Ficha: seção 05 `CharacterGearPanel` (`character-gear-panel.tsx`): o do slot, o elo atual, os stats com o bônus
+  (`character.gear.stats`; os da seção 01 são sem ele) e o seletor com a prévia do elo antes de equipar. Elenco: ícone do
+  tipo na cor do grau no cartão.
+- As ações do personagem (build, pontos, aprimorar) **não devolvem o `gear`**: `storeCharacter` (game-api) mantém o do
+  cache; pontos livres relêem a ficha e o inventário (o elo sai dos stats).
+- Baú: `contents.gear` / `convertedGearKey` (`GearReveal` em `chests-page.tsx`). Batalha: `unit.gear` no painel da unidade
+  (passiva dos dois lados; elo, queda e chance de perder a vez só nas suas); `SKIP` com `reason: 'GEAR'` (faixa e "Rebelde!"),
+  `HEAL`/`STATUS` com `source: 'GEAR'` no registro; o painel compara com `gear.stats`.
+- Guia `#equipamento` (`gearTerms` e `GearGuide`), tutorial `arsenal`. Admin: coleção `gear` (`gear-form.tsx`, espelho de
+  `GearTemplate.create`; `saleValue` só de leitura) e "Dar equipamento" na aba Contas (`useGrantGear`).
 
 ## Rodando
 
