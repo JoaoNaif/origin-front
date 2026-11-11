@@ -20,6 +20,8 @@ import {
 import { statLabels, statOrder, statShort } from '@/features/game/game-labels'
 import { statInfo } from '@/features/game/glossary'
 import { CharacterPortrait, PortraitPop } from '@/features/game/character-art'
+import type { CharacterGear } from '@/features/gear/gear-api'
+import { bondLabels, gradeColors, gradeLabels, kindIcons } from '@/features/gear/gear-labels'
 import { cn } from '@/lib/cn'
 
 /** Arte do topo (public/art). Sem o arquivo, fica só o fundo. */
@@ -308,7 +310,10 @@ function CharacterCard({ character, rarity, offers }: { character: Character; ra
             <Icon className="size-3.5" />
             {classLabels[character.characterClass]}
           </span>
-          {rarity && <span className="font-display text-base font-extrabold tracking-normal text-(--tone)">{rarity}</span>}
+          <span className="flex items-center gap-2">
+            {character.gear && <GearMark gear={character.gear} />}
+            {rarity && <span className="font-display text-base font-extrabold tracking-normal text-(--tone)">{rarity}</span>}
+          </span>
         </p>
 
         <p className="font-display text-3xl leading-[0.95] font-extrabold uppercase italic text-silver-bright">
@@ -350,6 +355,16 @@ function CharacterCard({ character, rarity, offers }: { character: Character; ra
         })}
       </dl>
     </Link>
+  )
+}
+
+/** O equipamento vivo no slot: ícone do tipo na cor do grau (o nome e o elo na dica nativa, o cartão é um link). */
+function GearMark({ gear }: { gear: CharacterGear }) {
+  const Icon = kindIcons[gear.kind]
+  return (
+    <span title={`${gear.name} · ${gradeLabels[gear.grade]}${gear.bond ? ` · ${bondLabels[gear.bond.bond]}` : ''}`} style={{ color: gradeColors[gear.grade] }}>
+      <Icon className="size-3.5" aria-label={gear.name} />
+    </span>
   )
 }
 

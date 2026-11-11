@@ -37,14 +37,14 @@ export function SkillOffers({ characterId, templateKey, characterClass }: { char
         {recovery ? 'Recuperação do despertar' : 'Bloco de skill'} · nível {current.level}
       </SectionTitle>
       {/* key: escolhido um bloco, o próximo começa sem seleção */}
-      <OfferBlock key={current.id} offer={current} characterId={characterId} />
+      <OfferBlock key={current.id} offer={current} />
     </section>
   )
 }
 
-function OfferBlock({ offer, characterId }: { offer: SkillOffer; characterId: string }) {
+function OfferBlock({ offer }: { offer: SkillOffer }) {
   const [picked, setPicked] = useState<string | null>(null)
-  const choose = useChooseSkillOffer(characterId)
+  const choose = useChooseSkillOffer()
   const pickedSkill = offer.skills.find((s) => s.key === picked)
 
   return (

@@ -1,5 +1,6 @@
-import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query'
 import type { BattleLoot } from '@/features/economy/economy-api'
+import type { CharacterGear } from '@/features/gear/gear-api'
 import { api } from '@/lib/api'
 
 // Dados da conta logada usados no hub (../origin-game/docs/api.md).
@@ -36,8 +37,13 @@ export type Character = {
   awakeningHint: AwakeningHint
   /** DOM (D152): visível, é treino e não segredo. */
   dom: CharacterDom
-  /** Fora de batalha: nível + pontos livres + traços. */
+  /** Fora de batalha: nível + pontos livres + traços + DOM, sem o equipamento. */
   stats: StatBlock
+  /**
+   * Equipamento vivo no slot (D153), com o elo e os stats já com o bônus; nulo sem equipamento. Só vem em
+   * `GET /me/characters` e `GET /characters/:id` (ausente no personagem novo do baú e no admin).
+   */
+  gear?: CharacterGear | null
   freePoints: { allocated: StatBlock; available: number; maxPerStat: StatBlock }
   traitKeys: string[]
   /** `buildSlot` 1 a 4 = na build. */
@@ -229,43 +235,48 @@ export function useCharacter(id: string) {
   })
 }
 
+/**
+ * Grava o personagem que voltou de uma ação na ficha e na lista. As ações não mandam o equipamento (`gear` ausente):
+ * fica o que já estava no cache.
+ */
+export function storeCharacter(queryClient: QueryClient, character: Character) {
+  const merge = (old?: Character) => (character.gear === undefined && old ? { ...character, gear: old.gear } : character)
+  queryClient.setQueryData<Character>(characterQueryKey(character.id), merge)
+  queryClient.setQueryData<Character[]>(['me', 'characters'], (list) => list?.map((c) => (c.id === character.id ? merge(c) : c)))
+}
+
 /** Personagem salvo: atualiza a ficha e a lista sem nova ida ao servidor. `refetch`: outras listas que a ação muda. */
-function useSaveCharacter<T>(id: string, request: (input: T) => Promise<Character>, refetch?: QueryKey) {
+function useSaveCharacter<T>(request: (input: T) => Promise<Character>, refetch: QueryKey[] = []) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: request,
-    onSuccess: (character) => {
-      queryClient.setQueryData(characterQueryKey(id), character)
-      queryClient.setQueryData<Character[]>(['me', 'characters'], (list) =>
-        list?.map((c) => (c.id === id ? character : c)),
-      )
-    },
+    onSuccess: (character) => storeCharacter(queryClient, character),
     // também no erro: um 400 de "bloco já escolhido" (outra aba) deixa a fila velha
-    onSettled: () => refetch && queryClient.invalidateQueries({ queryKey: refetch }),
+    onSettled: () => Promise.all(refetch.map((queryKey) => queryClient.invalidateQueries({ queryKey }))),
   })
 }
 
 /** PUT /characters/:id/build: as 4 skills, na ordem dos slots. */
 export function useEquipSkills(id: string) {
-  return useSaveCharacter(id, async (skillKeys: string[]) =>
+  return useSaveCharacter(async (skillKeys: string[]) =>
     (await api.put<{ character: Character }>(`/characters/${id}/build`, { skillKeys })).data.character,
   )
 }
 
 /** POST /skill-offers/:id/choose: aprende 1 skill do bloco (fica fora da build) e tira o bloco da fila. */
-export function useChooseSkillOffer(characterId: string) {
+export function useChooseSkillOffer() {
   return useSaveCharacter(
-    characterId,
     async ({ offerId, skillKey }: { offerId: string; skillKey: string }) =>
       (await api.post<{ character: Character }>(`/skill-offers/${offerId}/choose`, { skillKey })).data.character,
-    ['me', 'skill-offers'],
+    [['me', 'skill-offers']],
   )
 }
 
-/** PUT /characters/:id/free-points: troca a distribuição inteira (D48). */
+/** PUT /characters/:id/free-points: troca a distribuição inteira (D48). O elo do equipamento sai dos stats: relê. */
 export function useAllocateFreePoints(id: string) {
-  return useSaveCharacter(id, async (freePoints: StatBlock) =>
-    (await api.put<{ character: Character }>(`/characters/${id}/free-points`, freePoints)).data.character,
+  return useSaveCharacter(
+    async (freePoints: StatBlock) => (await api.put<{ character: Character }>(`/characters/${id}/free-points`, freePoints)).data.character,
+    [characterQueryKey(id), ['me', 'gear'], ['gear']],
   )
 }
 

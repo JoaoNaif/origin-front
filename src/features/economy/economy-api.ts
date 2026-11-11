@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
-import { characterQueryKey, type Character, type Lineage, type Rarity, type SkillTier } from '@/features/game/game-api'
+import { characterQueryKey, storeCharacter, type Character, type Lineage, type Rarity, type SkillTier } from '@/features/game/game-api'
+import type { Gear } from '@/features/gear/gear-api'
 import { api } from '@/lib/api'
 
 // Economia (../origin-game/docs/api.md, "Economia"; D100, D104, D150): carteira com moeda (M) e fragmentos, baús e o
@@ -27,7 +28,11 @@ export type ChestContents = {
   character: { templateKey: string; characterId: string } | null
   /** Repetido, que virou moeda. */
   convertedTemplateKey: string | null
-  /** Valor do repetido ou da raridade sem personagem no catálogo. */
+  /** Equipamento vivo que entrou no inventário (D153; ausente nos baús abertos antes dele). */
+  gear?: { templateKey: string; gearId: string } | null
+  /** Equipamento que não coube no inventário e virou moeda. */
+  convertedGearKey?: string | null
+  /** Valor do que virou moeda (repetido, raridade sem personagem ou equipamento sem espaço). */
   coins: number
   fragments: FragmentDelta
 }
@@ -114,20 +119,22 @@ export function useBuyChest() {
   })
 }
 
-export type OpenChestResult = { chest: Chest; character: Character | null; wallet: Wallet }
+export type OpenChestResult = { chest: Chest; character: Character | null; gear: Gear | null; wallet: Wallet }
 
-/** POST /chests/:id/open: 1 item (personagem novo ou moeda) + fragmentos. */
+/** POST /chests/:id/open: 1 item (personagem novo, equipamento ou moeda) + fragmentos. */
 export function useOpenChest() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => (await api.post<OpenChestResult>(`/chests/${id}/open`)).data,
-    onSuccess: ({ chest, character, wallet }) => {
+    onSuccess: ({ chest, character, gear, wallet }) => {
       setWallet(queryClient, wallet)
       queryClient.setQueryData<Chest[]>(chestsKey, (list) => list?.filter((c) => c.id !== chest.id))
       if (character) {
         queryClient.setQueryData(characterQueryKey(character.id), character)
         queryClient.invalidateQueries({ queryKey: ['me', 'characters'] })
       }
+      // o inventário (`gearKey` de gear-api)
+      if (gear) queryClient.invalidateQueries({ queryKey: ['me', 'gear'] })
     },
     // 400 "já aberto" (outra aba): a lista estava velha
     onError: () => queryClient.invalidateQueries({ queryKey: chestsKey }),
@@ -164,8 +171,7 @@ export function useEnhanceSkill(characterId: string) {
       ).data,
     onSuccess: ({ character, wallet }) => {
       setWallet(queryClient, wallet)
-      queryClient.setQueryData(characterQueryKey(characterId), character)
-      queryClient.setQueryData<Character[]>(['me', 'characters'], (list) => list?.map((c) => (c.id === characterId ? character : c)))
+      storeCharacter(queryClient, character)
     },
     onError: () => refetchWalletOnError(queryClient),
   })

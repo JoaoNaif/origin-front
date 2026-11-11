@@ -105,11 +105,22 @@ export const domTerms: { term: string; text: string }[] = [
   { term: 'Avançado', text: 'Dá um título e uma skill única, de uso único por batalha, sem Desgaste. Pede feitos de pelo menos 3 papéis diferentes.' },
 ]
 
+/** Equipamento vivo (D94, D153): o que é, em poucas frases. Números exatos vêm de `GET /gear-rules`. */
+export const gearTerms: { term: string; text: string }[] = [
+  { term: 'Equipamento vivo', text: 'Arma ou armadura feita de minério vivo: tem vontade própria e escolhe quem a usa. Um por personagem; passa livremente entre os da conta.' },
+  { term: 'Grau', text: 'Escudeiro, Cavaleiro, Mestre, Rei e Divino. Quanto mais alto, mais forte o bônus e a passiva, mais requisitos e mais cara a falta de elo.' },
+  { term: 'Elo', text: 'Sai dos atributos do personagem: cada equipamento pede alguns altos (entre os 2 maiores) e baixos (entre os 2 menores). Todos = pleno; metade = parcial; menos = sem elo.' },
+  { term: 'Título', text: 'Um título da lista do equipamento (hoje, os do DOM avançado) ou o traço Prodígio cobrem 1 requisito. No máximo 1 somando os dois.' },
+  { term: 'Passiva', text: 'Uma por linhagem do minério: dano contínuo, menos dano, ignorar Defesa, Vontade contra status, regeneração ou escudo inicial. Rende menos sem elo pleno.' },
+  { term: 'Custo e rebeldia', text: 'O elo pleno cobra Desgaste no início da batalha. Sem elo pleno, os atributos caem na batalha e, do Mestre para cima, ele pode agir sozinho e tirar a vez do portador.' },
+]
+
 /** Termos da economia (Mercado, Baús, aprimoramento; D100, D104, D150). Valores exatos vêm de `GET /economy`. */
 export const economyTerms: { term: string; text: string }[] = [
   { term: 'Moeda (M)', text: 'Vem do fim de toda batalha: vitória dá mais que derrota, adversário difícil rende mais e repetir o mesmo rende menos. Gasta em baús, fragmentos e aprimoramento.' },
   { term: 'Fragmentos', text: 'Um tipo por linhagem, mais o Neutro. Vêm da batalha (do tipo das variantes do esquadrão) e dos baús. Até 500 por tipo: o que passar vira moeda.' },
-  { term: 'Baú', text: 'Traz 1 item da raridade sorteada e alguns fragmentos. Compra-se no Mercado (E, D e C) e às vezes cai no fim da batalha.' },
+  { term: 'Baú', text: 'Traz 1 item da raridade sorteada (personagem ou equipamento vivo) e alguns fragmentos. Compra-se no Mercado (E, D e C) e às vezes cai no fim da batalha.' },
+  { term: 'Inventário', text: 'Onde ficam os equipamentos, 1 espaço cada, mesmo em uso. Compra-se mais de 5 em 5 no Arsenal. Cheio, o equipamento do baú vira moeda.' },
   { term: 'Raridade', text: 'De E (comum) a SS (raríssimo): mede o quanto o personagem é difícil de conseguir, não a força. O nível do baú muda a chance de cada uma.' },
   { term: 'Repetido', text: 'Personagem que você já tem saindo do baú: vira moeda pelo valor da raridade.' },
   { term: 'Aprimorar', text: 'Tentativa paga de deixar uma skill 15% mais forte (dano, cura, escudo, buff e debuff). Custa moeda e fragmentos da linhagem da skill, que saem mesmo se não der certo. Uma vez por skill.' },

@@ -24,6 +24,7 @@ import { rarityTone } from '@/features/economy/economy-labels'
 import { CharacterPortrait } from '@/features/game/character-art'
 import { domPillarColors, domPillarIcons, domPillarLabels } from '@/features/game/dom-labels'
 import { dangerLabels, lineageLabels, statOrder } from '@/features/game/game-labels'
+import { CharacterGearPanel } from '@/features/gear/character-gear-panel'
 import { TutorialButton } from '@/features/tutorial/tutorial-button'
 import { httpStatus } from '@/lib/api'
 import { cn } from '@/lib/cn'
@@ -94,6 +95,20 @@ export function CharacterPage() {
             DOM
           </SectionTitle>
           <DomPanel dom={data.dom} />
+        </section>
+
+        <section className="space-y-5">
+          <SectionTitle
+            index="05"
+            actions={
+              <Link to="/arsenal" className="font-mono text-[11px] uppercase tracking-[0.15em] text-fg-subtle transition-colors hover:text-primary-soft">
+                Arsenal →
+              </Link>
+            }
+          >
+            Equipamento
+          </SectionTitle>
+          <CharacterGearPanel character={data} />
         </section>
       </div>
     </div>

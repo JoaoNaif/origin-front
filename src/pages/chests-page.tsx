@@ -14,6 +14,10 @@ import { WalletBar } from '@/features/economy/wallet-bar'
 import { CharacterPortrait } from '@/features/game/character-art'
 import { classIcons } from '@/features/game/class-icons'
 import { classLabels, useTemplates, type Template } from '@/features/game/game-api'
+import { lineageLabels } from '@/features/game/game-labels'
+import { useGearRules } from '@/features/gear/gear-api'
+import { gradeColors, kindLabels } from '@/features/gear/gear-labels'
+import { GearEmblem, GradeTag } from '@/features/gear/gear-ui'
 import { apiErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/cn'
 
@@ -61,7 +65,7 @@ export function ChestsPage() {
             <span className="text-gradient-primary pr-3">ús</span>
           </>
         }
-        description="Cada baú traz um item da raridade sorteada, um personagem novo ou moeda, e alguns fragmentos."
+        description="Cada baú traz um item da raridade sorteada (um personagem novo, uma arma ou armadura viva, ou moeda) e alguns fragmentos."
       />
 
       <Page className="pt-10 lg:pt-10">
@@ -201,6 +205,7 @@ function OpenChestDialog({ chest, next, onNext, onClose }: {
 
 function Reveal({ result, templates }: { result: OpenChestResult; templates?: Template[] }) {
   const contents = result.chest.contents!
+  if (contents.gear || contents.convertedGearKey) return <GearReveal result={result} />
   const templateKey = contents.character?.templateKey ?? contents.convertedTemplateKey
   const template = templates?.find((t) => t.key === templateKey)
   const tone = rarityTone[contents.rarity]
@@ -266,6 +271,66 @@ function Reveal({ result, templates }: { result: OpenChestResult; templates?: Te
           Ver a ficha de {result.character.name}
         </Link>
       )}
+    </div>
+  )
+}
+
+/** O item do baú foi um equipamento vivo (D153): novo no Arsenal, ou moeda se o inventário estava cheio. */
+function GearReveal({ result }: { result: OpenChestResult }) {
+  const rules = useGearRules()
+  const contents = result.chest.contents!
+  const key = contents.gear?.templateKey ?? contents.convertedGearKey
+  const item = result.gear ?? rules.data?.gear.find((g) => g.key === key)
+  const isNew = !!contents.gear
+  const color = item ? gradeColors[item.grade] : rarityTone[contents.rarity].color
+
+  return (
+    <div className="space-y-5" aria-live="polite">
+      <div className="flex flex-col items-center text-center motion-safe:animate-reveal">
+        <div className="relative flex size-36 items-center justify-center overflow-hidden border-2 bg-bg" style={{ borderColor: color, boxShadow: `0 0 40px -8px ${color}` }}>
+          <div className="absolute inset-0 opacity-25" style={{ background: `radial-gradient(circle at 50% 30%, ${color}, transparent 70%)` }} />
+          {item ? (
+            <GearEmblem kind={item.kind} grade={item.grade} size="hero" className={cn(!isNew && 'grayscale')} />
+          ) : (
+            <Coins value={contents.coins} className="relative text-2xl font-bold text-silver-bright" iconClassName="size-6" />
+          )}
+        </div>
+
+        <p className="mt-4 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-fg-subtle">
+          Raridade <RarityTag rarity={contents.rarity} />
+          {item && <GradeTag grade={item.grade} />}
+        </p>
+
+        <p className={cn('mt-2 font-display text-4xl leading-none font-extrabold uppercase italic', isNew ? 'text-silver-bright' : 'text-fg-muted')}>
+          {item?.name ?? 'Equipamento vivo'}
+        </p>
+        {item && (
+          <p className="mt-1 text-sm text-fg-muted">
+            {kindLabels[item.kind]} · {lineageLabels[item.lineage]}
+          </p>
+        )}
+        {isNew ? (
+          <Badge tone="success" className="mt-3">
+            <Sparkles className="size-3" /> Novo no Arsenal
+          </Badge>
+        ) : (
+          <p className="mt-2 text-sm text-fg-muted">
+            Inventário cheio: virou <Coins value={contents.coins} className="text-fg" />.
+          </p>
+        )}
+      </div>
+
+      <div className="flex flex-col items-center gap-2 border-t border-line pt-4">
+        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">Também veio</p>
+        <FragmentDeltaList fragments={contents.fragments} className="justify-center" />
+      </div>
+
+      <Link
+        to={isNew && result.gear ? `/arsenal?item=${result.gear.id}` : '/arsenal'}
+        className={buttonClasses({ size: 'sm', variant: 'secondary', className: 'w-full' })}
+      >
+        {isNew ? 'Ver no Arsenal e escolher quem usa' : 'Liberar espaço no Arsenal'}
+      </Link>
     </div>
   )
 }

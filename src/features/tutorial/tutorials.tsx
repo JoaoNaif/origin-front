@@ -28,14 +28,17 @@ import {
   ScrollText,
   Shield,
   Sparkles,
+  Sword,
   Swords,
   Trash2,
   TrendingUp,
   UserRound,
   Users,
+  Crown,
   type LucideIcon,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { BondBadge, GearEmblem, RequirementChips } from '@/features/gear/gear-ui'
 import { fragmentLabels, rarityTone } from '@/features/economy/economy-labels'
 import { ChestArt, Coins, FragmentIcon } from '@/features/economy/economy-ui'
 import { difficultyLabels, type CharacterClass } from '@/features/game/game-api'
@@ -886,9 +889,80 @@ export const tutorials: Record<TutorialId, Tutorial> = {
             }
             points={[
               { icon: Sparkles, label: 'Personagem novo', text: 'Entra no seu elenco na hora, no nível 0. O atalho leva à ficha dele.' },
+              { icon: Sword, label: 'Equipamento', text: 'Às vezes sai uma arma ou armadura viva do grau da raridade. Vai para o Arsenal; sem espaço, vira moeda.' },
               { icon: Coins3, label: 'Repetido', text: 'Vira moeda, pelo valor da raridade.' },
               { icon: Gem, label: 'Fragmentos', text: 'Todo baú também traz fragmentos de tipo sorteado.' },
               { icon: Swords, label: 'Na batalha', text: 'O fim da batalha às vezes deixa um baú (na derrota, menos chance). No máximo um por batalha.' },
+            ]}
+          />
+        ),
+      },
+    ],
+  },
+
+  arsenal: {
+    id: 'arsenal',
+    title: 'Arsenal',
+    summary: 'Armas e armaduras vivas: o inventário, o elo com cada personagem, equipar e vender.',
+    steps: [
+      {
+        title: 'O inventário',
+        content: (
+          <StepLayout
+            lead="Aqui ficam as armas e armaduras vivas da conta. Clique numa para ver o que ela faz e o elo com cada personagem."
+            visual={
+              <div className="flex items-center justify-center gap-3">
+                <GearEmblem kind="WEAPON" grade="SQUIRE" />
+                <GearEmblem kind="ARMOR" grade="MASTER" />
+                <GearEmblem kind="WEAPON" grade="KING" />
+              </div>
+            }
+            points={[
+              { icon: Package, label: 'Espaços', text: 'Cada equipamento ocupa 1, mesmo em uso. Compre mais de 5 em 5, com moeda.' },
+              { icon: Sparkles, label: 'De onde vem', text: 'Dos baús. Quanto mais raro o baú, mais alto o grau (Escudeiro, Cavaleiro, Mestre, Rei).' },
+              { icon: Coins3, label: 'Vender', text: 'Pelo valor do grau. Tire do personagem antes; o Divino não se vende.' },
+            ]}
+          />
+        ),
+      },
+      {
+        title: 'O elo',
+        content: (
+          <StepLayout
+            lead="O equipamento escolhe quem o usa. Cada um pede um perfil de atributos: quem combina tem elo pleno."
+            visual={
+              <div className="flex flex-col items-center gap-2">
+                <RequirementChips
+                  requirements={[
+                    { stat: 'ATTACK', level: 'HIGH', met: true },
+                    { stat: 'SPEED', level: 'HIGH', met: true },
+                    { stat: 'DEFENSE', level: 'LOW', met: false },
+                  ]}
+                />
+                <span className="flex gap-1.5">
+                  <BondBadge bond="FULL" />
+                  <BondBadge bond="PARTIAL" />
+                  <BondBadge bond="NONE" />
+                </span>
+              </div>
+            }
+            points={[
+              { icon: TrendingUp, label: 'Alto e baixo', text: 'Alto = entre os 2 maiores atributos do personagem; baixo = entre os 2 menores (comparado com a média das classes).' },
+              { icon: Crown, label: 'Título', text: 'Um título da lista do equipamento (os do DOM avançado) ou o traço Prodígio cobrem 1 requisito.' },
+              { icon: Users, label: 'Quem usa', text: 'A lista mostra o elo com cada personagem, do melhor para o pior. Um equipamento por personagem.' },
+            ]}
+          />
+        ),
+      },
+      {
+        title: 'Na batalha',
+        content: (
+          <StepLayout
+            lead="Com elo pleno, o equipamento dá bônus e uma passiva, e cobra um pouco de Desgaste no início. Sem elo, ele resiste ao portador."
+            points={[
+              { icon: TrendingUp, label: 'Bônus', text: 'Dois atributos sobem: 100% no pleno, menos no parcial e no sem elo. Aparece também na ficha.' },
+              { icon: Sparkles, label: 'Passiva', text: 'Uma por linhagem: dano contínuo, menos dano, ignorar Defesa, Vontade, regeneração ou escudo.' },
+              { icon: Flag, label: 'Sem elo', text: 'Atributos caem na batalha e, do Mestre para cima, ele pode agir sozinho e fazer o portador perder a vez.' },
             ]}
           />
         ),
@@ -928,6 +1002,7 @@ export const guideTutorials: TutorialId[] = [
   'personagem',
   'esquadroes',
   'formacao',
+  'arsenal',
   'batalhar',
   'batalha',
   'mercado',
@@ -943,6 +1018,7 @@ export const tutorialIcons: Record<TutorialId, LucideIcon> = {
   personagem: UserRound,
   esquadroes: LayoutGrid,
   formacao: Grid3x3,
+  arsenal: Sword,
   batalhar: Swords,
   batalha: Crosshair,
   mercado: Store,

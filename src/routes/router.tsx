@@ -8,6 +8,7 @@ import { CharacterPage } from '@/pages/character-page'
 import { CharactersPage } from '@/pages/characters-page'
 import { ChestsPage } from '@/pages/chests-page'
 import { DesignPage } from '@/pages/design-page'
+import { GearPage } from '@/pages/gear-page'
 import { GuidePage } from '@/pages/guide-page'
 import { HistoryPage } from '@/pages/history-page'
 import { HomePage } from '@/pages/home-page'
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
           { path: '/personagens', element: <CharactersPage /> },
           { path: '/personagens/:id', element: <CharacterPage /> },
           { path: '/esquadroes', element: <SquadsPage /> },
+          { path: '/arsenal', element: <GearPage /> },
           { path: '/mercado', element: <MarketPage /> },
           { path: '/baus', element: <ChestsPage /> },
           { path: '/historico', element: <HistoryPage /> },

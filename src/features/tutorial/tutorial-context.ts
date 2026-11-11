@@ -10,6 +10,7 @@ export type TutorialId =
   | 'personagem'
   | 'esquadroes'
   | 'formacao'
+  | 'arsenal'
   | 'batalhar'
   | 'batalha'
   | 'mercado'

@@ -11,6 +11,7 @@ import {
   PanelLeftOpen,
   ShieldCheck,
   Store,
+  Sword,
   Swords,
   Trophy,
   Users,
@@ -51,6 +52,7 @@ export function Sidebar({ collapsed, onToggleCollapsed, onNavigate }: SidebarPro
       items: [
         { to: '/personagens', label: 'Personagens', icon: Users, badge: offers?.length },
         { to: '/esquadroes', label: 'Esquadrões', icon: LayoutGrid },
+        { to: '/arsenal', label: 'Arsenal', icon: Sword },
       ],
     },
     {
