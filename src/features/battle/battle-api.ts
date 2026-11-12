@@ -15,6 +15,7 @@ import type {
   Stat,
   StatusType,
 } from '@/features/game/game-api'
+import type { BeastContract, BeastGrade } from '@/features/beasts/beast-api'
 import type { BattleLoot } from '@/features/economy/economy-api'
 import type { GearEffects, GearGrade, GearKind, GearLineage } from '@/features/gear/gear-api'
 import { api } from '@/lib/api'
@@ -63,6 +64,8 @@ export type UnitSkill = {
   /** Skill única do DOM (D152): uso único, sem Desgaste e sem teste de acerto. */
   singleUse: boolean
   domPillar: DomPillar | null
+  /** Invocação de besta (D154): a `key` da besta; uso único, toma o slot dela na build. Ausente em batalha antiga. */
+  beastKey?: string | null
 }
 
 export type BattleUnit = {
@@ -95,7 +98,14 @@ export type BattleUnit = {
   skills: UnitSkill[]
   /** Equipamento vivo (D153); nulo sem, ausente em batalha antiga. */
   gear?: BattleGear | null
+  /** Besta (D154): de quem é, o contrato e os turnos em campo. Fora de campo: `alive` falso e sem posição. */
+  beast?: BattleBeast | null
+  /** Igualdade no dono: o escudo que resta e os turnos dele. */
+  equality?: { buffer: number; turnsLeft: number } | null
 }
+
+/** A besta na batalha (D154). `auto` = a máquina joga por ela (Dominância). */
+export type BattleBeast = { key: string; ownerRef: string; contract: Exclude<BeastContract, 'EQUALITY'>; grade: BeastGrade; auto: boolean; duration: number; turnsLeft: number }
 
 /** O equipamento na batalha: o item e a passiva dos dois lados; o elo e o efeito inteiro, só nas suas unidades. */
 export type BattleGear = Pick<GearEffects, 'passive'> & {
@@ -138,6 +148,16 @@ export type BattleEvent =
   | { type: 'WOKE'; ref: string }
   | { type: 'CLEANSE'; ref: string; targetRef: string; status: StatusType | null }
   | { type: 'DOT'; ref: string; amount: number }
+  /** Invocação (D154): `ref` pôs a besta `beastRef` em campo, na célula `to`. */
+  | { type: 'SUMMON'; ref: string; beastRef: string; to: Cell }
+  /** A besta saiu de campo pela duração; com `equality`, acabou a Igualdade do dono `ref`. */
+  | { type: 'BEAST_LEAVE'; ref: string; equality?: boolean }
+  /** Igualdade começou no dono, com o escudo. */
+  | { type: 'EQUALITY'; ref: string; buffer: number }
+  /** O escudo da Igualdade segurou parte do golpe. */
+  | { type: 'EQUALITY_ABSORB'; ref: string; amount: number }
+  /** O escudo esvaziou: o dono levou `amount` e perdeu os bônus. */
+  | { type: 'EQUALITY_BREAK'; ref: string; amount: number }
   | { type: 'SKILL'; ref: string; skillKey: string; potency: number }
   | { type: 'INTERCEPT'; guardianRef: string; protectedRef: string }
   | { type: 'MISS'; ref: string; targetRef: string }

@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
-import { ArrowLeftRight, Footprints, Loader2, Shield, X } from 'lucide-react'
+import { ArrowLeftRight, Footprints, Loader2, PawPrint, Shield, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { BattleUnit, Cell, PreviewEffect, TurnOption, UnitSkill } from '@/features/battle/battle-api'
 import { displayHp } from '@/features/battle/battle-events'
@@ -10,6 +10,8 @@ import { SkillKindIcon, SkillShortTags, SkillTags } from '@/features/game/skill-
 import { describeTargeting, explainEffect, skillFacts } from '@/features/game/skill-text'
 import { CharacterPortrait } from '@/features/game/character-art'
 import { domPillarColors, domPillarIcons, domPillarLabels } from '@/features/game/dom-labels'
+import { contractLabels } from '@/features/beasts/beast-labels'
+import { BeastEmblem } from '@/features/beasts/beast-ui'
 import { cn } from '@/lib/cn'
 
 /** O que o jogador está escolhendo: uma skill, mover ou trocar. */
@@ -84,8 +86,10 @@ export function ActionBar({ actor, options, loading, mode, chosen, group, busy, 
   const selectedKey = mode?.kind === 'SKILL' ? mode.skillKey : null
   // a tecla é a posição na lista do servidor: as 4 da build primeiro, as únicas do DOM depois (5 em diante)
   const slots = actor.skills.map((skill, i) => ({ skill, hotkey: i + 1 }))
-  const build = slots.filter((s) => !s.skill.singleUse)
-  const dom = slots.filter((s) => s.skill.singleUse)
+  // a invocação de besta é de uso único mas fica no slot dela na build; a faixa de cima é só das skills únicas do DOM
+  const isDom = (skill: UnitSkill) => skill.singleUse && !!skill.domPillar
+  const build = slots.filter((s) => !isDom(s.skill))
+  const dom = slots.filter((s) => isDom(s.skill))
   // com a faixa do DOM na 1ª linha, o resto vai para a 2ª (senão o auto-posicionamento sobe o card para o lado dela)
   const row2 = dom.length ? 'lg:row-start-2' : undefined
 
@@ -169,18 +173,32 @@ export function ActionBar({ actor, options, loading, mode, chosen, group, busy, 
 /** Quem age: retrato, nome, classe e a vida em barra. */
 function ActorCard({ actor, className }: { actor: BattleUnit; className?: string }) {
   const hp = actor.maxHp ? Math.max(0, Math.min(100, (actor.hp / actor.maxHp) * 100)) : 0
+  const beast = actor.beast
   return (
-    <div title={classLabels[actor.characterClass]} className={cn('chamfer flex items-center gap-3 p-3 [--chamfer-bg:var(--color-primary-dim)] [--chamfer-border:rgb(139_92_246/0.5)] [--cut:12px]', className)}>
-      <CharacterPortrait
-        templateKey={actor.templateKey}
-        characterClass={actor.characterClass}
-        zoom={3.2}
-        className="size-12 shrink-0 border border-primary/40 bg-bg"
-        iconClassName="size-5 text-primary-soft"
-      />
+    <div
+      title={beast ? `Besta · ${contractLabels[beast.contract]}` : classLabels[actor.characterClass]}
+      className={cn('chamfer flex items-center gap-3 p-3 [--chamfer-bg:var(--color-primary-dim)] [--chamfer-border:rgb(139_92_246/0.5)] [--cut:12px]', className)}
+    >
+      {beast ? (
+        <BeastEmblem grade={beast.grade} contract={beast.contract} size="md" />
+      ) : (
+        <CharacterPortrait
+          templateKey={actor.templateKey}
+          characterClass={actor.characterClass}
+          zoom={3.2}
+          className="size-12 shrink-0 border border-primary/40 bg-bg"
+          iconClassName="size-5 text-primary-soft"
+        />
+      )}
       <div className="min-w-0 flex-1 space-y-1">
-        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary-soft">
-          Sua vez
+        <p className="truncate font-mono text-[10px] uppercase tracking-[0.18em] text-primary-soft">
+          {beast ? (
+            <>
+              Besta <span className="text-beast">· {beast.turnsLeft}t em campo</span>
+            </>
+          ) : (
+            'Sua vez'
+          )}
         </p>
         <p className="truncate font-display text-lg leading-none font-bold uppercase tracking-wide text-silver-bright">{actor.name}</p>
         <div className="flex items-center gap-2">
@@ -368,7 +386,7 @@ function SkillSlot({ skill, hotkey, usable, active, disabled, onHover, onClick }
           <span className="truncate font-display text-base leading-tight font-bold uppercase tracking-wide text-silver-bright">{skill.name}</span>
           {off && (
             <span className={cn('shrink-0 font-mono text-[9px] font-bold uppercase tracking-widest', !skill.ready ? 'text-warning' : 'text-fg-subtle')}>
-              {!skill.ready ? 'Recarga' : 'Sem alvo'}
+              {!skill.ready ? (skill.singleUse ? 'Usada' : 'Recarga') : 'Sem alvo'}
             </span>
           )}
         </span>
@@ -377,7 +395,9 @@ function SkillSlot({ skill, hotkey, usable, active, disabled, onHover, onClick }
       {/* recarga e Desgaste: só quando o slot é largo (container query), para não apertar o nome */}
       <span className="hidden shrink-0 flex-col items-end gap-1 border-l border-line/70 pl-3 font-mono text-[10px] leading-none text-fg-subtle tabular-nums @[19rem]:flex">
         <span title="Recarga depois de usar">
-          {skill.cooldown ? (
+          {skill.singleUse ? (
+            <span className="text-beast">uso único</span>
+          ) : skill.cooldown ? (
             <>
               <span className="text-fg-muted">{skill.cooldown}</span> {skill.cooldown === 1 ? 'turno' : 'turnos'}
             </>
@@ -478,6 +498,11 @@ function SkillDetail({ skill }: { skill: UnitSkill }) {
           className="font-mono text-[10px] uppercase tracking-[0.18em] text-(--tone)"
         >
           Skill única do DOM · {domPillarLabels[skill.domPillar]} avançado
+        </p>
+      )}
+      {skill.beastKey && (
+        <p className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-beast">
+          <PawPrint className="size-3.5" /> Invocação de besta · gasta a vez inteira
         </p>
       )}
       <div className="flex items-start gap-3">

@@ -25,7 +25,7 @@ export const toneText: Record<Tone, string> = {
 /** Ícone de cada ação do registro (o desenho fica no componente). */
 export type LogIcon =
   | 'skill' | 'damage' | 'miss' | 'heal' | 'shield' | 'status' | 'resist' | 'buff' | 'debuff' | 'desgaste' | 'passive'
-  | 'move' | 'time' | 'lock' | 'skip' | 'field' | 'defeated' | 'end'
+  | 'move' | 'time' | 'lock' | 'skip' | 'field' | 'defeated' | 'end' | 'beast'
 
 /** Uma ação dentro da vez: ícone, texto e o número à direita (dano, cura, %). */
 export type LogEntry = { id: number; icon: LogIcon; text: string; value?: string; tone: Tone }
@@ -175,6 +175,18 @@ function describeEvent(event: BattleEvent, ctx: Context): Omit<LogEntry, 'id'> |
         : { icon: 'field', text: `Campo: ${ctx.field(event.fieldKey)}`, tone: 'warning' }
     case 'DEFEATED':
       return { icon: 'defeated', text: `${ctx.name(event.ref)} foi derrotado`, tone: sideTone(ctx, event.ref) === 'enemy' ? 'ally' : 'enemy' }
+    case 'SUMMON':
+      return { icon: 'beast', text: `Invoca ${ctx.name(event.beastRef)}`, tone: sideTone(ctx, event.ref) }
+    case 'BEAST_LEAVE':
+      return event.equality
+        ? { icon: 'beast', text: `A Igualdade de ${ctx.name(event.ref)} acaba`, tone: 'muted' }
+        : { icon: 'beast', text: `${ctx.name(event.ref)} deixa o campo`, tone: 'muted' }
+    case 'EQUALITY':
+      return { icon: 'beast', text: `${ctx.name(event.ref)} ganha o escudo da Igualdade`, value: `+${n(event.buffer)}`, tone: 'shield' }
+    case 'EQUALITY_ABSORB':
+      return { icon: 'shield', text: `A Igualdade segura parte do golpe em ${ctx.name(event.ref)}`, value: `${n(event.amount)}`, tone: 'shield' }
+    case 'EQUALITY_BREAK':
+      return { icon: 'damage', text: `O escudo da Igualdade quebra: ${ctx.name(event.ref)} sofre o rebote`, value: `-${n(event.amount)}`, tone: 'damage' }
     case 'BATTLE_END':
       return { icon: 'end', text: event.winner === 'PLAYER' ? 'Vitória' : 'Derrota', tone: event.winner === 'PLAYER' ? 'heal' : 'damage' }
   }
@@ -352,6 +364,32 @@ export function stepUnits(units: BattleUnit[], event: BattleEvent): { units: Bat
         floats.push({ ref: event.targetRef, text: 'Purificado!', tone: 'heal', big: true })
       }
       break
+    case 'SUMMON':
+      // a besta entra em campo com a vida cheia na célula escolhida
+      patch(event.beastRef, (u) => ({ alive: true, hp: u.maxHp, shield: 0, statuses: [], position: event.to }))
+      floats.push({ ref: event.beastRef, text: 'Invocada!', tone: 'heal', big: true })
+      break
+    case 'BEAST_LEAVE':
+      if (event.equality) {
+        patch(event.ref, () => ({ equality: null }))
+        floats.push({ ref: event.ref, text: 'Igualdade acabou', tone: 'muted' })
+      } else {
+        floats.push({ ref: event.ref, text: 'Partiu', tone: 'muted', big: true })
+        patch(event.ref, () => ({ alive: false, position: null }))
+      }
+      break
+    case 'EQUALITY':
+      patch(event.ref, (u) => ({ equality: { buffer: event.buffer, turnsLeft: u.equality?.turnsLeft ?? 0 } }))
+      floats.push({ ref: event.ref, text: 'Igualdade!', tone: 'shield', big: true })
+      break
+    case 'EQUALITY_ABSORB':
+      patch(event.ref, (u) => ({ equality: u.equality && { ...u.equality, buffer: Math.max(0, u.equality.buffer - event.amount) } }))
+      floats.push({ ref: event.ref, text: `${n(event.amount)} no escudo`, tone: 'shield' })
+      break
+    case 'EQUALITY_BREAK':
+      patch(event.ref, (u) => ({ equality: null, hp: Math.max(0, u.hp - event.amount) }))
+      floats.push({ ref: event.ref, text: `Escudo quebrou! -${n(event.amount)}`, tone: 'damage', big: true })
+      break
     case 'DEFEATED':
       patch(event.ref, () => ({ alive: false, hp: 0 }))
       floats.push({ ref: event.ref, text: 'Abatido!', tone: 'damage', big: true })
@@ -367,6 +405,13 @@ export function stepDelay(event: BattleEvent): number {
     case 'TURN':
       // a vez chega na unidade (destaque) antes de ela agir
       return 550
+    case 'SUMMON':
+    case 'EQUALITY_BREAK':
+      return 800
+    case 'BEAST_LEAVE':
+    case 'EQUALITY':
+    case 'EQUALITY_ABSORB':
+      return 420
     case 'SKILL':
       return 900
     case 'SKIP':
@@ -403,7 +448,8 @@ export function openingUnits(state: BattleState): BattleUnit[] | null {
   )
   const opponentTurn = state.events.some((e) => e.type === 'TURN' && !isPlayer(e.ref))
   if (playerActed || !opponentTurn) return null
-  return state.battle.units.map((u) => ({
+  // as bestas ficam como estão: fora de campo até a invocação
+  return state.battle.units.map((u) => u.beast ? u : ({
     ...u,
     hp: u.maxHp,
     shield: 0,

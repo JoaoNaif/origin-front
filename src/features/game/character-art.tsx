@@ -1,4 +1,5 @@
 import { useState, type CSSProperties } from 'react'
+import type { LucideIcon } from 'lucide-react'
 import { classIcons } from '@/features/game/class-icons'
 import { characterImage } from '@/features/game/character-images'
 import type { CharacterClass } from '@/features/game/game-api'
@@ -100,7 +101,7 @@ export function PortraitPop({ templateKey }: { templateKey: string }) {
  * dois lados se encararem. Animações (index.css): respirar sempre; avançar ao agir (`attackKey`), tremer e piscar no dano
  * (`hitKey`); a mudança de chave reinicia a animação. Morto fica cinza e apagado.
  */
-export function CharacterSprite({ templateKey, characterClass, side, dead, active, attackKey, hitKey, breathDelay }: {
+export function CharacterSprite({ templateKey, characterClass, side, dead, active, attackKey, hitKey, breathDelay, icon }: {
   templateKey: string
   characterClass: CharacterClass
   side: 'PLAYER' | 'OPPONENT'
@@ -111,12 +112,14 @@ export function CharacterSprite({ templateKey, characterClass, side, dead, activ
   attackKey?: number | null
   /** Muda quando ele leva dano (null = sem dano agora). */
   hitKey?: number | null
+  /** Ícone sem a imagem, no lugar do da classe (a besta usa a pata). */
+  icon?: LucideIcon
   /** Segundos: cada unidade respira num tempo diferente. */
   breathDelay: number
 }) {
   const { failed, onError } = useArt(templateKey)
   const ally = side === 'PLAYER'
-  const Icon = classIcons[characterClass]
+  const Icon = icon ?? classIcons[characterClass]
 
   return (
     <span className="pointer-events-none absolute inset-0 block" aria-hidden>

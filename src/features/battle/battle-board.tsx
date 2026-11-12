@@ -1,6 +1,6 @@
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { Skull } from 'lucide-react'
+import { PawPrint, Skull } from 'lucide-react'
 import type { BattleGear, BattleUnit, Cell, Side } from '@/features/battle/battle-api'
 import { bondLabels, gradeColors, gradeLabels, kindIcons, loseActionText, passiveLabels, passiveText, percentEntries, percentsText } from '@/features/gear/gear-labels'
 import { cellId, displayHp, toneText, type Float } from '@/features/battle/battle-events'
@@ -10,6 +10,7 @@ import { classLabels, type CharacterClass, type StatBlock } from '@/features/gam
 import { statLabels, statOrder, statShort, statusLabels } from '@/features/game/game-labels'
 import { statInfo, statusDetails, statusShort, statusTone } from '@/features/game/glossary'
 import { statusEffects } from '@/features/game/skill-text'
+import { contractLabels } from '@/features/beasts/beast-labels'
 import { cn } from '@/lib/cn'
 
 /** O que a célula mostra na hora de escolher a jogada. */
@@ -325,6 +326,7 @@ function UnitFigure({ side, cell, unit, ghost, active, mark, floats, hitKey, att
         attackKey={attackKey}
         hitKey={hitKey}
         breathDelay={unit ? breathDelay(unit.ref) : 0}
+        icon={unit?.beast ? PawPrint : undefined}
       />
       {/* Indestrutível (DOM): casca de luz em volta do corpo até o próximo turno dele */}
       {unit?.invulnerable && (
@@ -363,7 +365,15 @@ function UnitFigure({ side, cell, unit, ghost, active, mark, floats, hitKey, att
                 <span className="truncate font-display text-[13px] leading-none font-bold uppercase tracking-wide text-silver-bright">
                   {unit.name.split(' ')[0]}
                 </span>
-                <span className="shrink-0 font-mono text-[9px] text-fg-subtle">{unit.level}</span>
+                {unit.beast ? (
+                  // besta: a pata e os turnos que faltam em campo
+                  <span className="flex shrink-0 items-center gap-0.5 font-mono text-[9px] text-beast" title={`Besta · sai em ${unit.beast.turnsLeft} turnos dela`}>
+                    <PawPrint className="size-2.5" />
+                    {unit.beast.turnsLeft}
+                  </span>
+                ) : (
+                  <span className="shrink-0 font-mono text-[9px] text-fg-subtle">{unit.level}</span>
+                )}
               </span>
               <span className="mt-1 block h-1.5 overflow-hidden bg-overlay">
                 <span
@@ -374,13 +384,20 @@ function UnitFigure({ side, cell, unit, ghost, active, mark, floats, hitKey, att
               {shieldPercent > 0 && (
                 <span className="mt-px block h-0.5 bg-info transition-[width] duration-300" style={{ width: `${shieldPercent}%` }} />
               )}
+              {/* escudo da Igualdade (besta no dono), em relação ao HP máximo */}
+              {unit.equality && (
+                <span
+                  className="mt-px block h-0.5 bg-contract-equality transition-[width] duration-300"
+                  style={{ width: `${Math.min(100, (unit.equality.buffer / unit.maxHp) * 100)}%` }}
+                />
+              )}
               <span className="mt-0.5 block font-mono text-[9px] leading-none text-fg-muted tabular-nums">
                 {displayHp(unit.hp)}
                 {unit.shield > 0 && <span className="text-info"> +{displayHp(unit.shield)}</span>}
               </span>
             </span>
             {/* status e condições (o detalhe fica no painel) */}
-            {(unit.statuses.length > 0 || unit.protectedBy || unit.engaged || unit.invulnerable) && (
+            {(unit.statuses.length > 0 || unit.protectedBy || unit.engaged || unit.invulnerable || unit.equality) && (
               <span className="flex flex-wrap justify-center gap-0.5">
                 {unit.statuses.map((s) => (
                   <span key={s} className={cn('px-1 font-mono text-[9px] leading-tight font-bold', statusTone[s])} title={`${statusLabels[s]}: ${statusEffects[s]}`}>
@@ -390,6 +407,11 @@ function UnitFigure({ side, cell, unit, ghost, active, mark, floats, hitKey, att
                 {unit.invulnerable && (
                   <span className="bg-dom-body px-1 font-mono text-[9px] leading-tight font-bold text-bg" title="Indestrutível: não sofre dano até o próximo turno">
                     IND
+                  </span>
+                )}
+                {unit.equality && (
+                  <span className="bg-contract-equality px-1 font-mono text-[9px] leading-tight font-bold text-bg" title="Igualdade: o escudo da besta segura metade de cada golpe">
+                    IGU
                   </span>
                 )}
                 {unit.protectedBy && <span className="bg-info px-1 font-mono text-[9px] leading-tight font-bold text-bg">PROT</span>}
@@ -453,6 +475,13 @@ function UnitInspector({ unit, unitName, base }: {
     conditions.push({ label: 'Provocado', short: 'PRV', tone: statusTone.TAUNT, text: `por ${unitName(unit.tauntedBy)}: golpes de alvo único só podem mirar quem provocou.` })
   if (unit.invulnerable)
     conditions.push({ label: 'Indestrutível', short: 'IND', tone: 'bg-dom-body text-bg', text: 'skill única do DOM: não sofre dano nenhum até o próximo turno dele, nem o dano contínuo do início dele.' })
+  if (unit.equality)
+    conditions.push({
+      label: 'Igualdade',
+      short: 'IGU',
+      tone: 'bg-contract-equality text-bg',
+      text: `escudo de ${displayHp(unit.equality.buffer)} da besta: segura metade de cada golpe e dá Precisão e Esquiva por mais ${unit.equality.turnsLeft} ${unit.equality.turnsLeft === 1 ? 'turno' : 'turnos'} dele. Se esvaziar, ele leva um rebote e perde os bônus.`,
+    })
   if (unit.protectedBy)
     conditions.push({ label: 'Protegido', short: 'PROT', tone: 'bg-info text-bg', text: `por ${unitName(unit.protectedBy)}: golpes de alvo único nele caem no protetor até o próximo turno dele.` })
   if (unit.engaged)
@@ -474,9 +503,22 @@ function UnitInspector({ unit, unitName, base }: {
         </span>
       </span>
       <span className="block font-mono text-[10px] text-fg-muted">
-        {classLabels[unit.characterClass]} · LV {unit.level} · {displayHp(unit.hp)}/{displayHp(unit.maxHp)} HP
+        {unit.beast ? `Besta · ${contractLabels[unit.beast.contract]}` : `${classLabels[unit.characterClass]} · LV ${unit.level}`} ·{' '}
+        {displayHp(unit.hp)}/{displayHp(unit.maxHp)} HP
         {unit.shield > 0 && <span className="text-info"> · escudo {displayHp(unit.shield)}</span>}
       </span>
+      {unit.beast && (
+        <span className="mt-1.5 flex gap-2 text-xs leading-snug text-fg-muted">
+          <PawPrint className="mt-0.5 size-3.5 shrink-0 text-beast" />
+          <span>
+            De <span className="font-semibold text-fg">{unitName(unit.beast.ownerRef)}</span>. Sai em{' '}
+            <span className="font-semibold text-beast">
+              {unit.beast.turnsLeft} {unit.beast.turnsLeft === 1 ? 'turno' : 'turnos'}
+            </span>{' '}
+            dela. {unit.beast.auto ? 'A máquina joga por ela.' : 'Você joga com ela.'} Sem classe e sem passiva; não conta para a vitória.
+          </span>
+        </span>
+      )}
 
       <span className="mt-2.5 block space-y-1.5 border-t border-line/70 pt-2">
         {statuses.length === 0 && conditions.length === 0 && <span className="block text-xs text-fg-subtle">Nenhum status ativo.</span>}

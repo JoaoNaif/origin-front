@@ -20,6 +20,7 @@ import {
   Sparkle,
   Sparkles,
   Swords,
+  PawPrint,
   Trophy,
   Wind,
   Zap,
@@ -151,7 +152,8 @@ export function TopBar({ battle, units, playerName, onForfeit, forfeiting, onTog
 /** Placa de um lado: nome, subtítulo e a vida de cada um dos 4 (caído = cinza). Virada para o centro. */
 function TeamPlate({ side, title, subtitle, units }: { side: Side; title: string; subtitle: string; units: BattleUnit[] }) {
   const ally = side === 'PLAYER'
-  const team = units.filter((u) => u.side === side)
+  // os 4 do esquadrão: a besta não conta para a vitória (D154)
+  const team = units.filter((u) => u.side === side && !u.beast)
   const alive = team.filter((u) => u.alive).length
 
   return (
@@ -215,14 +217,21 @@ export function Timeline({ battle, units }: { battle: Battle; units: BattleUnit[
                 entry.current && (ally ? 'border-primary-soft shadow-[0_0_16px_rgb(139_92_246/0.5)]' : 'border-enemy shadow-glow-danger'),
               )}
             >
-              <CharacterPortrait
-                templateKey={unit.templateKey}
-                characterClass={unit.characterClass}
-                zoom={4.2}
-                mirror={!ally}
-                className={cn('shrink-0 rounded-pill bg-bg', entry.current ? 'size-7' : 'size-5')}
-                iconClassName={cn('size-3.5', ally ? 'text-primary-soft' : 'text-danger-hover')}
-              />
+              {unit.beast ? (
+                // besta na fila: a pata no lugar do retrato
+                <span className={cn('flex shrink-0 items-center justify-center rounded-pill border border-beast/50 bg-bg', entry.current ? 'size-7' : 'size-5')}>
+                  <PawPrint className="size-3.5 text-beast" />
+                </span>
+              ) : (
+                <CharacterPortrait
+                  templateKey={unit.templateKey}
+                  characterClass={unit.characterClass}
+                  zoom={4.2}
+                  mirror={!ally}
+                  className={cn('shrink-0 rounded-pill bg-bg', entry.current ? 'size-7' : 'size-5')}
+                  iconClassName={cn('size-3.5', ally ? 'text-primary-soft' : 'text-danger-hover')}
+                />
+              )}
               <span className={cn('font-display font-bold uppercase tracking-wide text-fg', entry.current ? 'text-base' : 'text-xs')}>
                 {unit.name.split(' ')[0]}
               </span>
@@ -254,6 +263,7 @@ const logIcons: Record<LogIcon, LucideIcon> = {
   field: Mountain,
   defeated: Skull,
   end: Trophy,
+  beast: PawPrint,
 }
 
 /** Só as últimas vezes vão para a tela (a batalha passa de cem vezes). */

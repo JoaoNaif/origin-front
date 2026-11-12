@@ -117,7 +117,8 @@ export function BattlePage() {
     (p: Playback) => {
       queryClient.setQueryData(battleScreenKey(id), p.after)
       // quem caiu na jogada deixa a marca na última célula (o servidor manda a posição nula)
-      const fallen = p.units.filter((u) => !u.alive && u.position)
+      // a besta que cai ou sai some do campo (não é um dos 4): sem marca
+      const fallen = p.units.filter((u) => !u.alive && u.position && !u.beast)
       if (fallen.length)
         setGraves((g) => new Map([...g, ...fallen.map((u) => [u.ref, { side: u.side, cell: u.position!, name: u.name, templateKey: u.templateKey, characterClass: u.characterClass }] as const)]))
       setPlayback(null)
@@ -523,7 +524,9 @@ function CastBanner({ banner, unit, context }: { banner: Banner; unit?: BattleUn
             ? banner.reason === 'GEAR'
               ? `${unit.gear?.name ?? 'Equipamento vivo'} age sozinho`
               : statusLabels[banner.reason]
-            : banner.skillKey.startsWith('dom:')
+            : banner.skillKey.startsWith('summon:')
+              ? 'Invocação de besta'
+              : banner.skillKey.startsWith('dom:')
               ? 'Skill única do DOM'
               : ally
                 ? 'Seu ataque'
