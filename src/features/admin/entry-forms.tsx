@@ -5,6 +5,7 @@ import {
   traitCategoryLabels,
   traitEffectSpecs,
   type FieldBody,
+  lineageText,
   type FormProps,
   type TraitBody,
   type VariantBody,
@@ -25,16 +26,6 @@ const submitLabel = (isNew: boolean | undefined, noun: string) => `${isNew ? 'Cr
 // Variante
 // ---------------------------------------------------------------------------
 
-/** O que cada linhagem é e o que o Desgaste dela consome (D59, `LINEAGE_COST_TARGET`). */
-const lineageText: Record<Lineage, { what: string; cost: string }> = {
-  FUNDAMENTAL: { what: 'As forças básicas do mundo: tempo, espaço, energia pura.', cost: 'gasta HP máximo' },
-  ELEMENTAL: { what: 'Fogo, gelo, raio, água: os elementos da natureza.', cost: 'gasta HP atual' },
-  MATERIAL: { what: 'Metal, pedra, matéria: moldar e endurecer coisas.', cost: 'gasta Defesa' },
-  VECTORIAL: { what: 'Movimento, força, gravidade: mudar direção e velocidade.', cost: 'gasta Precisão' },
-  PSYCHIC: { what: 'Mente: ilusão, controle, leitura.', cost: 'gasta Vontade' },
-  BIOLOGICAL: { what: 'O corpo: regenerar, mutar, envenenar.', cost: 'gasta Esquiva' },
-  NONE: { what: 'Sem poder: quem luta só com técnica.', cost: 'gasta Defesa' },
-}
 
 type VariantStepId = 'identity' | 'lineage' | 'awakening' | 'review'
 

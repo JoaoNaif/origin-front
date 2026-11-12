@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react'
-import { Gift, Loader2, Search, Sword } from 'lucide-react'
+import { Gift, Loader2, PawPrint, Search, Sword } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { SectionTitle } from '@/components/layout/page'
@@ -10,9 +10,12 @@ import {
   useAdminAccounts,
   useAdminCatalog,
   useGrantCharacter,
+  useGrantBeast,
   useGrantGear,
   useSetCharacterDom,
 } from '@/features/admin/admin-api'
+import type { BeastContract, BeastGrade } from '@/features/beasts/beast-api'
+import { beastGradeLabels, beastGradeOrder, contractLabels } from '@/features/beasts/beast-labels'
 import type { GearGrade } from '@/features/gear/gear-api'
 import { gradeLabels, gradeOrder } from '@/features/gear/gear-labels'
 import { classIcons } from '@/features/game/class-icons'
@@ -111,6 +114,7 @@ function AccountDetail({ username }: { username: string }) {
             <div className="flex flex-col items-end gap-2">
               {characters.data && <GrantCharacter username={username} owned={characters.data.map((c) => c.templateKey)} />}
               <GrantGear username={username} />
+              <GrantBeast username={username} />
             </div>
           }
         >
@@ -255,6 +259,44 @@ function GrantGear({ username }: { username: string }) {
       <Button size="sm" variant="secondary" disabled={!gearKey || grant.isPending} onClick={() => grant.mutate(gearKey, { onSuccess: () => setGearKey('') })}>
         {grant.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Sword className="size-3.5" />}
         Dar equipamento
+      </Button>
+    </div>
+  )
+}
+
+/** Dá uma besta, sem contrato (no MVP, é o "evento" que dá bestas). */
+function GrantBeast({ username }: { username: string }) {
+  const catalog = useAdminCatalog()
+  const grant = useGrantBeast(username)
+  const [beastKey, setBeastKey] = useState('')
+  const items = [...(catalog.data?.beasts ?? [])].sort(
+    (a, b) => beastGradeOrder.indexOf(a.grade as BeastGrade) - beastGradeOrder.indexOf(b.grade as BeastGrade) || a.name.localeCompare(b.name),
+  )
+
+  if (items.length === 0) return null
+
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {grant.isError && <span className="text-xs text-danger">{adminErrorMessage(grant.error)}</span>}
+      {grant.isSuccess && <span className="text-xs text-success">{grant.data.name} entrou nas bestas da conta.</span>}
+      <select
+        value={beastKey}
+        onChange={(e) => {
+          grant.reset()
+          setBeastKey(e.target.value)
+        }}
+        className="focus-ring h-8 rounded-control border border-line bg-bg px-2 text-sm text-fg"
+      >
+        <option value="">Escolha a besta</option>
+        {items.map((b) => (
+          <option key={b.key} value={b.key}>
+            {b.name} ({contractLabels[b.contract as BeastContract] ?? String(b.contract)}, {beastGradeLabels[b.grade as BeastGrade] ?? String(b.grade)})
+          </option>
+        ))}
+      </select>
+      <Button size="sm" variant="secondary" disabled={!beastKey || grant.isPending} onClick={() => grant.mutate(beastKey, { onSuccess: () => setBeastKey('') })}>
+        {grant.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <PawPrint className="size-3.5" />}
+        Dar besta
       </Button>
     </div>
   )

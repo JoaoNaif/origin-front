@@ -15,6 +15,7 @@ import type {
 } from '@/features/game/game-api'
 import { rangeLabels, statLabels, statusLabels } from '@/features/game/game-labels'
 import type { GearGrade, GearKind, GearLineage } from '@/features/gear/gear-api'
+import type { BeastContract, BeastGrade } from '@/features/beasts/beast-api'
 
 // O que o formulário do admin precisa saber de cada corpo (../origin-game/src/infra/http/schemas/catalog.ts):
 // tipos, nomes em português, explicações e os valores de partida. As regras finas continuam no servidor.
@@ -142,6 +143,33 @@ export type GearBody = {
   titles: string[]
 }
 
+/**
+ * Besta (D154): contrato fixo, grau, linhagem (nunca none), 2 skills em campo no formato da skill sem Desgaste (nenhuma na
+ * Igualdade) e, só no Mestre, os requisitos (quantos o grau pede) e os títulos.
+ */
+export type BeastBody = {
+  name: string
+  description: string | null
+  contract: BeastContract
+  grade: BeastGrade
+  lineage: GearLineage
+  skills: BeastSkillBody[]
+  requirements?: { stat: Stat; level: AwakeningRequirementLevel }[]
+  titles?: string[]
+}
+
+export type BeastSkillBody = {
+  name: string
+  description: string | null
+  tier: SkillTier
+  target: SkillTarget
+  range: SkillRange | null
+  area: SkillArea
+  cooldown: number
+  baseHitChance: number | null
+  effects: Effect[]
+}
+
 /** Categoria e limiar padrão de cada tipo de missão (`awakeningMissionKinds` de `GET /admin/options`). */
 export type AwakeningMissionKinds = Record<AwakeningMissionKind, { category: AwakeningMissionCategory; defaultThreshold: number }>
 
@@ -170,6 +198,8 @@ export type AdminRules = {
     requirementCount: Record<GearGrade, number>
     titles: { min: number; max: number }
   }
+  /** Bestas: skills por besta (Dominância e Mestre) e requisitos do Mestre por grau. */
+  beast?: { skillCount: number; masterRequirementCount: Record<BeastGrade, number> }
 }
 
 export const rarityLabels: Record<Rarity, string> = { E: 'E', D: 'D', C: 'C', B: 'B', A: 'A', S: 'S', SS: 'SS' }
@@ -498,6 +528,30 @@ export const emptyBodies: Record<CatalogCollection, () => Record<string, unknown
     ],
     titles: [],
   }),
+  // uma Dominância Cavaleiro do seed (Lobo de Cinzas), com uma mordida e uma investida
+  beasts: (): BeastBody => ({
+    name: '',
+    description: null,
+    contract: 'DOMINANCE',
+    grade: 'KNIGHT',
+    lineage: 'ELEMENTAL',
+    skills: [newBeastSkill('Mordida', 0.8, 0), newBeastSkill('Investida', 1.2, 2)],
+  }),
+}
+
+/** Skill de besta em branco: golpe corpo a corpo de alvo único. */
+export function newBeastSkill(name = '', power = 1, cooldown = 1): BeastSkillBody {
+  return {
+    name,
+    description: null,
+    tier: cooldown ? 'STANDARD' : 'BASIC',
+    target: 'ENEMY',
+    range: 'MELEE',
+    area: 'SINGLE',
+    cooldown,
+    baseHitChance: 0.9,
+    effects: [{ type: 'DAMAGE', power }],
+  }
 }
 
 /** `key` a partir do nome: sem acento, minúsculas, espaços viram `-` ("Olho de Águia" → "olho-de-aguia"). */
@@ -565,6 +619,13 @@ export const collectionInfo: Record<CatalogCollection, { label: string; singular
     example: 'Ex.: Lâmina de Brasa, Escudeiro, Elemental',
     help: 'Armas e armaduras vivas. O grau fixa a força, os requisitos e o preço; a linhagem dá a passiva; o perfil de atributos decide o elo com quem usa. Saem de baú (menos o Divino, que o admin dá na aba Contas).',
   },
+  beasts: {
+    label: 'Bestas',
+    singular: 'besta',
+    feminine: true,
+    example: 'Ex.: Lobo de Cinzas, Dominância, Cavaleiro',
+    help: 'Criaturas por contrato. O contrato (Dominância, Mestre ou Igualdade) vem fixo na besta; o grau fixa a força. Dominância e Mestre têm 2 skills em campo; a Igualdade não tem. Não saem de baú: o admin dá na aba Contas.',
+  },
 }
 
 // ---------------------------------------------------------------------------
@@ -600,3 +661,14 @@ export function keyOptions(items: CatalogItem[], hint?: (item: CatalogItem) => s
 
 /** "a" ou "o" conforme o gênero do tipo ("Nova variante", "Novo modelo", "criada", "criado"). */
 export const ending = (collection: CatalogCollection) => (collectionInfo[collection].feminine ? 'a' : 'o')
+
+/** O que cada linhagem é e o que o Desgaste dela consome (D59, `LINEAGE_COST_TARGET`). */
+export const lineageText: Record<Lineage, { what: string; cost: string }> = {
+  FUNDAMENTAL: { what: 'As forças básicas do mundo: tempo, espaço, energia pura.', cost: 'gasta HP máximo' },
+  ELEMENTAL: { what: 'Fogo, gelo, raio, água: os elementos da natureza.', cost: 'gasta HP atual' },
+  MATERIAL: { what: 'Metal, pedra, matéria: moldar e endurecer coisas.', cost: 'gasta Defesa' },
+  VECTORIAL: { what: 'Movimento, força, gravidade: mudar direção e velocidade.', cost: 'gasta Precisão' },
+  PSYCHIC: { what: 'Mente: ilusão, controle, leitura.', cost: 'gasta Vontade' },
+  BIOLOGICAL: { what: 'O corpo: regenerar, mutar, envenenar.', cost: 'gasta Esquiva' },
+  NONE: { what: 'Sem poder: quem luta só com técnica.', cost: 'gasta Defesa' },
+}

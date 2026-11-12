@@ -2,12 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import type { Account } from '@/features/auth/auth-api'
 import type { BattleSummary, Character, DomLevel, DomPillar } from '@/features/game/game-api'
+import type { Beast } from '@/features/beasts/beast-api'
 import type { Gear } from '@/features/gear/gear-api'
 import { api, apiErrorMessage, type ApiErrorBody } from '@/lib/api'
 
 // Rotas de admin (../origin-game/docs/api.md, "Admin"). Todas dão 403 para quem não é ADMIN.
 
-export type CatalogCollection = 'variants' | 'traits' | 'templates' | 'skills' | 'fields' | 'npc-squads' | 'awakenings' | 'gear'
+export type CatalogCollection = 'variants' | 'traits' | 'templates' | 'skills' | 'fields' | 'npc-squads' | 'awakenings' | 'gear' | 'beasts'
 
 /** Item no formato do corpo da edição (ligações pela `key`) mais os campos só de leitura. */
 export type CatalogItem = { key: string; name: string } & Record<string, unknown>
@@ -23,6 +24,7 @@ export type AdminCatalog = {
   npcSquads: CatalogItem[]
   awakenings: CatalogItem[]
   gear: CatalogItem[]
+  beasts: CatalogItem[]
 }
 
 /** Coleção da URL → chave na resposta de `GET /admin/catalog`. */
@@ -35,6 +37,7 @@ export const catalogKeys: Record<CatalogCollection, Exclude<keyof AdminCatalog, 
   'npc-squads': 'npcSquads',
   awakenings: 'awakenings',
   gear: 'gear',
+  beasts: 'beasts',
 }
 
 /** Campos que o `GET /admin/catalog` traz e o `PUT` ignora. */
@@ -44,6 +47,7 @@ export const readOnlyFields: Partial<Record<CatalogCollection, string[]>> = {
   'npc-squads': ['level'],
   awakenings: ['baseVariantKey'],
   gear: ['saleValue'],
+  beasts: ['saleValue'],
 }
 
 /** Corpo da edição: o item sem a `key` (vai na URL) e sem os campos só de leitura. */
@@ -167,6 +171,16 @@ export function useGrantGear(username: string) {
   })
 }
 
+/** POST /admin/accounts/:username/beasts: dá uma besta, sem contrato (no MVP é o "evento"; 400 se o inventário encheu). */
+export function useGrantBeast(username: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (beastKey: string) => (await api.post<{ beast: Beast }>(`/admin/accounts/${username}/beasts`, { beastKey })).data.beast,
+    // se for a própria conta do admin, Bestas e o inventário mudam junto
+    onSuccess: () => Promise.all([['me', 'beasts'], ['me', 'gear']].map((queryKey) => queryClient.invalidateQueries({ queryKey }))),
+  })
+}
+
 /**
  * PUT /admin/characters/:id/dom: define o nível de cada pilar (nulo = sem), para testar sem farmar feitos (D152).
  * A janela não muda e a perda volta a contar do zero.
@@ -236,6 +250,9 @@ const fieldNames: Record<string, string> = {
   grade: 'Grau',
   titles: 'Títulos',
   gearKey: 'Equipamento',
+  beastKey: 'Besta',
+  contract: 'Contrato',
+  skills: 'Skill',
 }
 
 const fieldPath = (path: (string | number)[]) =>
