@@ -8,6 +8,7 @@ import {
   Crown,
   Flame,
   GraduationCap,
+  PawPrint,
   Grid3x3,
   Play,
   ScrollText,
@@ -16,6 +17,9 @@ import {
   Sword,
   type LucideIcon,
 } from 'lucide-react'
+import { useBeastRules } from '@/features/beasts/beast-api'
+import { beastGradeColors, contractColors, contractIcons, contractLabels, contractOrder, contractText } from '@/features/beasts/beast-labels'
+import { BeastGradeTag } from '@/features/beasts/beast-ui'
 import { useGearRules, type GearLineage } from '@/features/gear/gear-api'
 import { fmt, gradeColors, gradeLabels, lineageCostTarget, loseActionText, passiveLabels, passiveText, percentsText } from '@/features/gear/gear-labels'
 import { GradeTag } from '@/features/gear/gear-ui'
@@ -29,7 +33,7 @@ import { classIcons } from '@/features/game/class-icons'
 import { classLabels, difficultyLabels, useDomRules, type AiDifficulty, type CharacterClass, type StatusType } from '@/features/game/game-api'
 import { domLevelLabels, domPillarColors, domPillarIcons, domPillarLabels, domPillarThemes, domRoleLabels } from '@/features/game/dom-labels'
 import { classAuras, statLabels, statOrder, statShort, statusLabels } from '@/features/game/game-labels'
-import { awakeningTerms, battleTerms, domTerms, economyTerms, gearTerms, statInfo, statusDetails, statusShort, statusTone } from '@/features/game/glossary'
+import { awakeningTerms, battleTerms, beastTerms, domTerms, economyTerms, gearTerms, statInfo, statusDetails, statusShort, statusTone } from '@/features/game/glossary'
 import { statusEffects } from '@/features/game/skill-text'
 import { useTutorial } from '@/features/tutorial/tutorial-context'
 import { guideTutorials, tutorialIcons, tutorials } from '@/features/tutorial/tutorials'
@@ -47,6 +51,7 @@ const sections: { id: string; label: string; icon: LucideIcon }[] = [
   { id: 'dom', label: 'DOM', icon: Crown },
   { id: 'despertar', label: 'Despertar', icon: Flame },
   { id: 'equipamento', label: 'Equipamento', icon: Sword },
+  { id: 'bestas', label: 'Bestas', icon: PawPrint },
   { id: 'economia', label: 'Economia', icon: Coins },
 ]
 
@@ -199,8 +204,14 @@ export function GuidePage() {
             <GearGuide />
           </Section>
 
-          {/* 09 Economia */}
-          <Section id="economia" index="09" title="Economia" lead="Moeda, fragmentos, baús e aprimoramento: o que você ganha e onde gasta.">
+          {/* 09 Bestas */}
+          <Section id="bestas" index="09" title="Bestas" lead="Criaturas por contrato: lutam do seu lado ou protegem o dono. O contrato decide como.">
+            <TermGrid terms={beastTerms} tone="var(--color-beast)" />
+            <BeastGuide />
+          </Section>
+
+          {/* 10 Economia */}
+          <Section id="economia" index="10" title="Economia" lead="Moeda, fragmentos, baús e aprimoramento: o que você ganha e onde gasta.">
             <TermGrid terms={economyTerms} tone="var(--color-coin)" />
           </Section>
 
@@ -678,6 +689,75 @@ function DomGuide() {
           .map(([d, w]) => `${difficultyLabels[d as AiDifficulty] ?? d} ${fmt(w)}`)
           .join(' · ')}
         .
+      </p>
+    </div>
+  )
+}
+
+/** Os três contratos e a régua dos graus das bestas, de `GET /beast-rules`. */
+function BeastGuide() {
+  const rules = useBeastRules()
+  if (rules.isPending) return <div className="h-64 animate-pulse bg-raised" />
+  if (!rules.data) return <p className="text-sm text-fg-subtle">Não foi possível carregar as regras das bestas.</p>
+  const r = rules.data.beastRules
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        {contractOrder.map((contract) => {
+          const Icon = contractIcons[contract]
+          return (
+            <HoverCard key={contract} tone={contractColors[contract]} watermark={contractLabels[contract]}>
+              <p className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-(--tone)">
+                <Icon className="size-3.5" /> Contrato
+              </p>
+              <p className="font-display text-xl leading-tight font-bold uppercase tracking-wide text-silver-bright">{contractLabels[contract]}</p>
+              <p className="mt-1 text-sm leading-relaxed text-fg-muted transition-colors group-hover:text-fg">{contractText[contract]}</p>
+            </HoverCard>
+          )
+        })}
+      </div>
+
+      <div className="hud-corners overflow-x-auto border border-line/60 bg-surface/60 [--hud-color:var(--color-line-strong)]">
+        <table className="w-full min-w-200 text-left text-sm">
+          <thead>
+            <tr className="border-b border-line font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle">
+              <th className="px-4 py-2.5 font-normal">Grau</th>
+              <th className="px-4 py-2.5 font-normal">Dominância</th>
+              <th className="px-4 py-2.5 font-normal">Mestre</th>
+              <th className="px-4 py-2.5 font-normal">Igualdade</th>
+              <th className="px-4 py-2.5 font-normal">Venda</th>
+            </tr>
+          </thead>
+          <tbody>
+            {r.grades.map((g) => (
+              <tr key={g.grade} className="border-b border-line/50 align-top transition-colors last:border-0 hover:bg-white/2" style={{ '--tone': beastGradeColors[g.grade] } as CSSProperties}>
+                <td className="px-4 py-2.5">
+                  <BeastGradeTag grade={g.grade} />
+                </td>
+                <td className="px-4 py-2.5 text-xs text-fg-muted">
+                  <span className="font-mono text-fg tabular-nums">{fmt(g.statPercent.DOMINANCE)}%</span> dos atributos do dono
+                  <span className="mt-0.5 block text-[11px] text-fg-subtle">dono −{fmt(g.dominanceWillCost)}% de Vontade</span>
+                </td>
+                <td className="px-4 py-2.5 text-xs text-fg-muted">
+                  <span className="font-mono text-fg tabular-nums">{fmt(g.statPercent.MASTER)}%</span> dos atributos do dono
+                  <span className="mt-0.5 block text-[11px] text-fg-subtle">pede {g.masterRequirements} requisitos, todos</span>
+                </td>
+                <td className="px-4 py-2.5 text-xs text-fg-muted">
+                  escudo de <span className="font-mono text-fg tabular-nums">{fmt(g.equality.bufferPercent)}%</span> do HP máx.
+                  <span className="mt-0.5 block text-[11px] text-fg-subtle">+{fmt(g.equality.bonusPercent)}% Precisão e Esquiva</span>
+                </td>
+                <td className="px-4 py-2.5 font-mono text-xs text-fg-muted">{g.saleValue === null ? 'não se vende' : `${fmt(g.saleValue)} M`}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs leading-relaxed text-fg-subtle">
+        Em campo, a besta leva {fmt(r.speedShare * 100)}% da Velocidade e {fmt(r.willShare * 100)}% da Vontade do dono e fica {r.duration.normal} turnos
+        dela ({r.duration.sacred} na Sagrada). No máximo {r.fieldCap} em campo por esquadrão (a Igualdade não conta). A Igualdade segura{' '}
+        {fmt(r.equalityAbsorbShare * 100)}% de cada golpe por {r.duration.normal} turnos do dono; se o escudo esvaziar, ele perde {fmt(r.equalityBreakPercent)}% do
+        HP máximo, sem Defesa. Cada personagem tem {r.perCharacter} besta (mais com o traço Domador).
       </p>
     </div>
   )

@@ -43,6 +43,7 @@ Fontes gratuitas (OFL): Barlow Condensed (`font-display`, títulos e botões), I
   - `banner-adagas.jpg`: topo de Histórico (`HISTORY_ART` em `history-page.tsx`).
   - `banner-lanca.jpg`: slide Personagens do lobby e topo de Minha conta (`ACCOUNT_ART` em `account-page.tsx`).
   - `banner-arsenal.jpg`: topo do Arsenal (`GEAR_ART` em `gear-page.tsx`; sem arquivo, fica a grade).
+  - `banner-bestas.jpg`: topo de Bestas (`BEASTS_ART` em `beasts-page.tsx`; sem arquivo, fica a grade).
   - Topo das páginas do hub com arte: `PageBanner` (`src/components/layout/page-banner.tsx`). A arte aparece **inteira**,
     sem recorte (`BannerArt`: altura do banner, largura na proporção, colada à direita, borda esquerda sumindo no fundo);
     o lobby usa o mesmo `BannerArt`.
@@ -168,6 +169,26 @@ cores e textos em `gear-labels.ts` (tokens `grade-*` no `index.css`, a cor da ra
   `HEAL`/`STATUS` com `source: 'GEAR'` no registro; o painel compara com `gear.stats`.
 - Guia `#equipamento` (`gearTerms` e `GearGuide`), tutorial `arsenal`. Admin: coleção `gear` (`gear-form.tsx`, espelho de
   `GearTemplate.create`; `saleValue` só de leitura) e "Dar equipamento" na aba Contas (`useGrantGear`).
+
+## Bestas
+
+Contratos com bestas (D95, D154). Rotas e tipos em `src/features/beasts/beast-api.ts`; nomes, cores e textos dos
+contratos em `beast-labels.ts` (tokens `beast` e `contract-*` no `index.css`; o grau usa `grade-*`, a sagrada o Divino);
+peças em `beast-ui.tsx` (`BeastEmblem`, sem arquivo de arte: a pata na cor do grau com o filete do contrato; `ContractTag`,
+`BeastGradeTag`, `BeastSkillList`). **Regras e números vêm de `GET /beast-rules`** (`useBeastRules`, com cache).
+
+- `/bestas` (`beasts-page.tsx`, grupo Coleção): as bestas da conta, o contrato em números, as skills em campo e o dono;
+  firmar (personagem + slot da build, com os requisitos do Mestre por personagem), trocar o slot, vender e soltar (com
+  confirmação: desfazer o contrato perde a besta). `?besta=` escolhe. Os requisitos usam `RequirementList` do equipamento.
+- Ficha: seção 06 `CharacterBeastsPanel` (`character.beasts`, com o slot e o aviso de build bloqueada no Mestre).
+- Batalha: a invocação é uma skill de uso único com `beastKey`, **no slot dela na build** (a faixa de cima é só das únicas
+  do DOM, `singleUse && domPillar`). As bestas são unidades com `beast` (fora de campo: `alive` falso e sem posição): pata
+  no lugar do ícone (`CharacterSprite icon`), turnos na plaquinha, fora do placar e sem marca ao cair. A do Mestre joga
+  pela `ActionBar` (o card mostra a besta). `equality` no dono: barra e etiqueta `IGU`. Eventos `SUMMON`, `BEAST_LEAVE`,
+  `EQUALITY`, `EQUALITY_ABSORB` e `EQUALITY_BREAK` em `battle-events.ts`; efeitos `SUMMON`/`EQUALITY` em `skill-text.ts`
+  (papel `SUMMON`).
+- Guia `#bestas` (`beastTerms` e `BeastGuide`), tutorial `bestas`. Admin: coleção `beasts` (`beast-form.tsx`, espelho de
+  `BeastTemplate`; os passos mudam com o contrato) e "Dar besta" na aba Contas (`useGrantBeast`).
 
 ## Rodando
 
