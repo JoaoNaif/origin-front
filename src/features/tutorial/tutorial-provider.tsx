@@ -58,6 +58,8 @@ export function TutorialProvider({ accountId, children }: { accountId: string; c
       case 'esquadroes':
       case 'formacao':
         return '/esquadroes'
+      case 'bestas':
+        return '/bestas'
       case 'arsenal':
         return '/arsenal'
       case 'batalhar':

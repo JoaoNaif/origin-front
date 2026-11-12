@@ -105,6 +105,18 @@ export const domTerms: { term: string; text: string }[] = [
   { term: 'Avançado', text: 'Dá um título e uma skill única, de uso único por batalha, sem Desgaste. Pede feitos de pelo menos 3 papéis diferentes.' },
 ]
 
+/** Contratos com bestas (D95, D154): o que é, em poucas frases. Números exatos vêm de `GET /beast-rules`. */
+export const beastTerms: { term: string; text: string }[] = [
+  { term: 'Besta', text: 'Criatura ligada a um personagem por contrato. Vem de eventos e ocupa 1 espaço do inventário, com contrato ou não.' },
+  { term: 'Contrato', text: 'Liga a besta a um personagem, uma vez só. Desfazer o contrato perde a besta. Cada personagem tem 1 (2 com o traço Domador); sagrada, só 1.' },
+  { term: 'Invocação', text: 'Toma um slot da build, escolhido por você. Na batalha, gasta a ação inteira, sem Desgaste, e só pode ser usada uma vez.' },
+  { term: 'Dominância', text: 'A besta entra em campo e a máquina joga por ela. O dono perde um pouco de Vontade enquanto ela fica.' },
+  { term: 'Mestre', text: 'A besta entra em campo e você joga com ela. Pede todos os requisitos de atributo do dono: sem eles, a batalha não começa.' },
+  { term: 'Igualdade', text: 'A besta não entra em campo: vira um escudo no dono, que segura metade de cada golpe e dá Precisão e Esquiva. Esvaziou, o dono leva um dano fixo.' },
+  { term: 'Besta em campo', text: 'Os atributos vêm do dono, pelo grau. Entra na fila com a barra zerada, não tem classe nem passiva e sai depois de alguns turnos dela ou ao cair. Não conta para a vitória.' },
+  { term: 'Grau', text: 'Escudeiro, Cavaleiro, Mestre, Rei e a Sagrada. Quanto mais alto, mais forte e, no Mestre, mais requisitos.' },
+]
+
 /** Equipamento vivo (D94, D153): o que é, em poucas frases. Números exatos vêm de `GET /gear-rules`. */
 export const gearTerms: { term: string; text: string }[] = [
   { term: 'Equipamento vivo', text: 'Arma ou armadura feita de minério vivo: tem vontade própria e escolhe quem a usa. Um por personagem; passa livremente entre os da conta.' },

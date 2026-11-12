@@ -24,6 +24,7 @@ import { rarityTone } from '@/features/economy/economy-labels'
 import { CharacterPortrait } from '@/features/game/character-art'
 import { domPillarColors, domPillarIcons, domPillarLabels } from '@/features/game/dom-labels'
 import { dangerLabels, lineageLabels, statOrder } from '@/features/game/game-labels'
+import { CharacterBeastsPanel } from '@/features/beasts/character-beasts-panel'
 import { CharacterGearPanel } from '@/features/gear/character-gear-panel'
 import { TutorialButton } from '@/features/tutorial/tutorial-button'
 import { httpStatus } from '@/lib/api'
@@ -109,6 +110,20 @@ export function CharacterPage() {
             Equipamento
           </SectionTitle>
           <CharacterGearPanel character={data} />
+        </section>
+
+        <section className="space-y-5">
+          <SectionTitle
+            index="06"
+            actions={
+              <Link to="/bestas" className="font-mono text-[11px] uppercase tracking-[0.15em] text-fg-subtle transition-colors hover:text-primary-soft">
+                Bestas →
+              </Link>
+            }
+          >
+            Bestas
+          </SectionTitle>
+          <CharacterBeastsPanel character={data} />
         </section>
       </div>
     </div>

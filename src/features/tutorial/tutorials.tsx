@@ -35,9 +35,11 @@ import {
   UserRound,
   Users,
   Crown,
+  PawPrint,
   type LucideIcon,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { BeastEmblem, ContractTag } from '@/features/beasts/beast-ui'
 import { BondBadge, GearEmblem, RequirementChips } from '@/features/gear/gear-ui'
 import { fragmentLabels, rarityTone } from '@/features/economy/economy-labels'
 import { ChestArt, Coins, FragmentIcon } from '@/features/economy/economy-ui'
@@ -900,6 +902,84 @@ export const tutorials: Record<TutorialId, Tutorial> = {
     ],
   },
 
+  bestas: {
+    id: 'bestas',
+    title: 'Bestas',
+    summary: 'Criaturas por contrato: os três contratos, firmar com um personagem e o slot da invocação.',
+    steps: [
+      {
+        title: 'O que é uma besta',
+        content: (
+          <StepLayout
+            lead="Uma criatura que se liga a um personagem por contrato. Na batalha, o personagem a invoca e ela luta do seu lado ou protege o dono."
+            visual={
+              <div className="flex items-center justify-center gap-3">
+                <BeastEmblem grade="KNIGHT" contract="DOMINANCE" />
+                <BeastEmblem grade="MASTER" contract="MASTER" />
+                <BeastEmblem grade="KING" contract="EQUALITY" />
+              </div>
+            }
+            points={[
+              { icon: Sparkles, label: 'De onde vem', text: 'De eventos especiais, não de baús. Ocupa 1 espaço do inventário, como o equipamento.' },
+              { icon: Crown, label: 'Grau', text: 'Escudeiro, Cavaleiro, Mestre, Rei e a Sagrada. Quanto mais alto, mais forte.' },
+              { icon: Coins3, label: 'Vender', text: 'Sem contrato, vende pelo valor do grau. A Sagrada não se vende.' },
+            ]}
+          />
+        ),
+      },
+      {
+        title: 'Os três contratos',
+        content: (
+          <StepLayout
+            lead="O contrato vem fixo na besta e decide como ela ajuda. Cada cor na tela é um contrato."
+            visual={
+              <div className="space-y-2">
+                <ContractTag contract="DOMINANCE" hint />
+                <ContractTag contract="MASTER" hint />
+                <ContractTag contract="EQUALITY" hint />
+              </div>
+            }
+            points={[
+              { label: 'Dominância', text: 'Entra em campo e a máquina joga por ela. O dono perde um pouco de Vontade enquanto ela fica.' },
+              { label: 'Mestre', text: 'Entra em campo e você joga com ela. Pede todos os requisitos de atributo do dono, ou a batalha não começa.' },
+              { label: 'Igualdade', text: 'Não entra em campo: vira um escudo no dono que segura metade de cada golpe e dá Precisão e Esquiva.' },
+            ]}
+          />
+        ),
+      },
+      {
+        title: 'Firmar o contrato',
+        content: (
+          <StepLayout
+            lead={
+              <>
+                Escolha o personagem e o <Strong>slot da build</Strong> que a invocação vai tomar na batalha. O contrato é uma vez só.
+              </>
+            }
+            points={[
+              { icon: Users, label: 'Quem', text: 'Cada personagem tem 1 besta (2 com o traço Domador) e no máximo 1 Sagrada. No Mestre, a lista mostra quem cumpre os requisitos.' },
+              { icon: LayoutGrid, label: 'Slot', text: 'Na batalha, a invocação fica no lugar da skill daquele slot. Dá para trocar o slot depois.' },
+              { icon: Trash2, label: 'Desfazer', text: 'Desfazer o contrato ou soltar a besta faz ela ir embora para sempre, sem moeda.' },
+            ]}
+          />
+        ),
+      },
+      {
+        title: 'Na batalha',
+        content: (
+          <StepLayout
+            lead="A invocação gasta a ação inteira, sem Desgaste, e só pode ser usada uma vez. A besta entra numa casa livre do seu lado."
+            points={[
+              { icon: Swords, label: 'Em campo', text: 'Os atributos vêm do dono. Entra na fila com a barra zerada e sai depois de 4 turnos dela (5 na Sagrada) ou ao cair.' },
+              { icon: Shield, label: 'Não é um dos 4', text: 'Sem classe e sem passiva. Não conta para a vitória, mas o dano dela conta. No máximo 2 em campo por esquadrão.' },
+              { icon: Eye, label: 'Na tela', text: 'Uma pata marca a besta e os turnos que faltam. Na Igualdade, o escudo aparece no dono.' },
+            ]}
+          />
+        ),
+      },
+    ],
+  },
+
   arsenal: {
     id: 'arsenal',
     title: 'Arsenal',
@@ -1003,6 +1083,7 @@ export const guideTutorials: TutorialId[] = [
   'esquadroes',
   'formacao',
   'arsenal',
+  'bestas',
   'batalhar',
   'batalha',
   'mercado',
@@ -1019,6 +1100,7 @@ export const tutorialIcons: Record<TutorialId, LucideIcon> = {
   esquadroes: LayoutGrid,
   formacao: Grid3x3,
   arsenal: Sword,
+  bestas: PawPrint,
   batalhar: Swords,
   batalha: Crosshair,
   mercado: Store,

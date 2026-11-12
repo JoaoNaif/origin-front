@@ -1,6 +1,7 @@
 import {
   ArrowDownCircle,
   ArrowUpCircle,
+  PawPrint,
   Hourglass,
   Mountain,
   Move,
@@ -17,6 +18,7 @@ import { skillKinds, type SkillKind } from '@/features/game/skill-text'
 // Papéis da skill (ataque, cura, defesa...): nome, ícone e cores. Usado pelas etiquetas (skill-badges.tsx) e pela build.
 
 export const kinds: Record<SkillKind, { label: string; icon: LucideIcon; text: string; box: string }> = {
+  SUMMON: { label: 'Invocação', icon: PawPrint, text: 'text-beast', box: 'border-beast/50 bg-beast/10 text-beast' },
   ATTACK: { label: 'Ataque', icon: Swords, text: 'text-danger-hover', box: 'border-danger/50 bg-danger-dim text-danger-hover' },
   HEAL: { label: 'Cura', icon: Sparkle, text: 'text-success', box: 'border-success/40 bg-success/10 text-success' },
   DEFENSE: { label: 'Defesa', icon: Shield, text: 'text-info', box: 'border-info/40 bg-info/10 text-info' },
@@ -31,6 +33,7 @@ export const kinds: Record<SkillKind, { label: string; icon: LucideIcon; text: s
 
 /** Cor de cada papel como variável CSS (para `--tone` em chanfros, barras e brilhos). */
 const kindColors: Record<SkillKind, string> = {
+  SUMMON: 'var(--color-beast)',
   ATTACK: 'var(--color-danger)',
   HEAL: 'var(--color-success)',
   DEFENSE: 'var(--color-info)',

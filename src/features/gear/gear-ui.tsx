@@ -196,8 +196,8 @@ function BondMeter({ bond }: { bond: GearBond }) {
   )
 }
 
-/** Os requisitos, um por linha, com o que "alto" e "baixo" querem dizer. */
-function RequirementList({ bond, holder }: { bond: GearBond; holder?: string }) {
+/** Os requisitos, um por linha, com o que "alto" e "baixo" querem dizer. Também nos contratos Mestre das bestas. */
+export function RequirementList({ bond, holder }: { bond: Pick<GearBond, 'requirements' | 'waived' | 'matchingTitles'>; holder?: string }) {
   const of = holder ? ` de ${holder}` : ''
   return (
     <ul className="divide-y divide-line/50 border border-line/60 bg-bg/40">

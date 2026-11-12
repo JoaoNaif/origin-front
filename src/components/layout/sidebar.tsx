@@ -8,6 +8,7 @@ import {
   LogOut,
   Package,
   PanelLeftClose,
+  PawPrint,
   PanelLeftOpen,
   ShieldCheck,
   Store,
@@ -53,6 +54,7 @@ export function Sidebar({ collapsed, onToggleCollapsed, onNavigate }: SidebarPro
         { to: '/personagens', label: 'Personagens', icon: Users, badge: offers?.length },
         { to: '/esquadroes', label: 'Esquadrões', icon: LayoutGrid },
         { to: '/arsenal', label: 'Arsenal', icon: Sword },
+        { to: '/bestas', label: 'Bestas', icon: PawPrint },
       ],
     },
     {

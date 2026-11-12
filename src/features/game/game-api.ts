@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query'
 import type { BattleLoot } from '@/features/economy/economy-api'
+import type { CharacterBeast } from '@/features/beasts/beast-api'
 import type { CharacterGear } from '@/features/gear/gear-api'
 import { api } from '@/lib/api'
 
@@ -44,6 +45,8 @@ export type Character = {
    * `GET /me/characters` e `GET /characters/:id` (ausente no personagem novo do baú e no admin).
    */
   gear?: CharacterGear | null
+  /** Bestas com contrato (D154), cada uma com o slot da build que a invocação toma; só nas mesmas rotas do `gear`. */
+  beasts?: CharacterBeast[]
   freePoints: { allocated: StatBlock; available: number; maxPerStat: StatBlock }
   traitKeys: string[]
   /** `buildSlot` 1 a 4 = na build. */
@@ -146,6 +149,9 @@ export type SkillEffect = { appliesTo?: 'TARGET' | 'SELF' } & (
   | { type: 'WEAKEN'; percent: number; duration: number; baseChance: number }
   | { type: 'FORESIGHT'; duration: number; chanceByMind: Record<DomLevel | 'NONE', number> }
   | { type: 'INVULNERABLE' }
+  // só nas invocações de besta (D154), na batalha: a skill nasce do contrato
+  | { type: 'SUMMON'; beastRef: string }
+  | { type: 'EQUALITY'; bufferPercent: number; bonusPercent: number; duration: number; absorbShare: number; breakPercent: number }
   | { type: 'RECOVER' | 'PROTECT' | 'CLEANSE' }
   | { type: 'GRANT_TURN'; attackPercent?: number }
   | { type: 'EXPLOIT'; status: StatusType; multiplier: number; consume: boolean }
@@ -240,7 +246,9 @@ export function useCharacter(id: string) {
  * fica o que já estava no cache.
  */
 export function storeCharacter(queryClient: QueryClient, character: Character) {
-  const merge = (old?: Character) => (character.gear === undefined && old ? { ...character, gear: old.gear } : character)
+  // as ações do personagem não devolvem o equipamento nem as bestas: fica o que já estava no cache
+  const merge = (old?: Character) =>
+    old ? { ...character, gear: character.gear === undefined ? old.gear : character.gear, beasts: character.beasts ?? old.beasts } : character
   queryClient.setQueryData<Character>(characterQueryKey(character.id), merge)
   queryClient.setQueryData<Character[]>(['me', 'characters'], (list) => list?.map((c) => (c.id === character.id ? merge(c) : c)))
 }

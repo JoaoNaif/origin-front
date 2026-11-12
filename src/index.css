@@ -88,6 +88,12 @@
   --color-grade-king: var(--color-rarity-ss);
   --color-grade-divine: #fff1c1;
 
+  /* Bestas (D154): a invocação e os três contratos (a IA joga, você joga, divide o dano); o grau usa grade-* (sagrada = divine) */
+  --color-beast: #a3e635;
+  --color-contract-dominance: #fb923c;
+  --color-contract-master: #c4b5fd;
+  --color-contract-equality: #5eead4;
+
   /*
    * Arredondamento: quase reto, linguagem de HUD. Para destaque, usar o chanfro (`chamfer`).
    * control = input, célula da grade · card = card, painel · panel = modal, drawer · pill = avatar, ponto

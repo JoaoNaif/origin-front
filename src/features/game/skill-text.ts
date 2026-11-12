@@ -106,14 +106,18 @@ export function explainEffect(effect: SkillEffect): string {
       return `O alvo fica Atordoado por ${turns(effect.duration)}. Chance pelo DOM da Mente dele: sem ou básico ${pct(effect.chanceByMind.BASIC)}, intermediário ${pct(effect.chanceByMind.INTERMEDIATE)}, avançado ${pct(effect.chanceByMind.ADVANCED)}.`
     case 'INVULNERABLE':
       return 'Anula todo o dano recebido até o próximo turno, inclusive o dano contínuo do início dele.'
+    case 'SUMMON':
+      return 'Invoca a besta numa casa livre do seu lado. Ela entra na fila e sai depois de alguns turnos dela ou ao cair.'
+    case 'EQUALITY':
+      return `Invoca a besta em si mesmo: um escudo de ${num(effect.bufferPercent)}% do HP máximo segura ${pct(effect.absorbShare)} de cada golpe e dá +${num(effect.bonusPercent)}% de Precisão e Esquiva por ${turns(effect.duration)}. Se o escudo esvaziar, perde ${num(effect.breakPercent)}% do HP máximo (sem Defesa) e os bônus.`
   }
 }
 
 /** Papel do efeito, para o jogador bater o olho: ataque, cura, buff... */
-export type SkillKind = 'ATTACK' | 'HEAL' | 'DEFENSE' | 'BUFF' | 'DEBUFF' | 'CONTROL' | 'POSITION' | 'TEMPO' | 'FIELD' | 'RECOVER'
+export type SkillKind = 'SUMMON' | 'ATTACK' | 'HEAL' | 'DEFENSE' | 'BUFF' | 'DEBUFF' | 'CONTROL' | 'POSITION' | 'TEMPO' | 'FIELD' | 'RECOVER'
 
 /** Ordem de importância: o primeiro presente é o papel principal da skill. */
-const kindOrder: SkillKind[] = ['ATTACK', 'HEAL', 'DEFENSE', 'BUFF', 'DEBUFF', 'CONTROL', 'POSITION', 'TEMPO', 'FIELD', 'RECOVER']
+const kindOrder: SkillKind[] = ['SUMMON', 'ATTACK', 'HEAL', 'DEFENSE', 'BUFF', 'DEBUFF', 'CONTROL', 'POSITION', 'TEMPO', 'FIELD', 'RECOVER']
 
 function kindOf(effect: SkillEffect): SkillKind {
   switch (effect.type) {
@@ -133,6 +137,9 @@ function kindOf(effect: SkillEffect): SkillKind {
       return 'CONTROL'
     case 'WEAKEN':
       return 'DEBUFF'
+    case 'SUMMON':
+    case 'EQUALITY':
+      return 'SUMMON'
     case 'INVULNERABLE':
       return 'DEFENSE'
     case 'REPOSITION':
