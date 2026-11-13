@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import {
   BookOpen,
+  CalendarClock,
   ChevronRight,
   Coins,
   Compass,
@@ -20,6 +21,7 @@ import {
 import { useBeastRules } from '@/features/beasts/beast-api'
 import { beastGradeColors, contractColors, contractIcons, contractLabels, contractOrder, contractText } from '@/features/beasts/beast-labels'
 import { BeastGradeTag } from '@/features/beasts/beast-ui'
+import { eventKindColors, eventKindIcons, eventKindLabels, eventKindOrder, eventKindText, modifierLabels } from '@/features/events/event-labels'
 import { useGearRules, type GearLineage } from '@/features/gear/gear-api'
 import { fmt, gradeColors, gradeLabels, lineageCostTarget, loseActionText, passiveLabels, passiveText, percentsText } from '@/features/gear/gear-labels'
 import { GradeTag } from '@/features/gear/gear-ui'
@@ -33,7 +35,7 @@ import { classIcons } from '@/features/game/class-icons'
 import { classLabels, difficultyLabels, useDomRules, type AiDifficulty, type CharacterClass, type StatusType } from '@/features/game/game-api'
 import { domLevelLabels, domPillarColors, domPillarIcons, domPillarLabels, domPillarThemes, domRoleLabels } from '@/features/game/dom-labels'
 import { classAuras, statLabels, statOrder, statShort, statusLabels } from '@/features/game/game-labels'
-import { awakeningTerms, battleTerms, beastTerms, domTerms, economyTerms, gearTerms, statInfo, statusDetails, statusShort, statusTone } from '@/features/game/glossary'
+import { awakeningTerms, battleTerms, beastTerms, domTerms, economyTerms, eventTerms, gearTerms, statInfo, statusDetails, statusShort, statusTone } from '@/features/game/glossary'
 import { statusEffects } from '@/features/game/skill-text'
 import { useTutorial } from '@/features/tutorial/tutorial-context'
 import { guideTutorials, tutorialIcons, tutorials } from '@/features/tutorial/tutorials'
@@ -52,6 +54,7 @@ const sections: { id: string; label: string; icon: LucideIcon }[] = [
   { id: 'despertar', label: 'Despertar', icon: Flame },
   { id: 'equipamento', label: 'Equipamento', icon: Sword },
   { id: 'bestas', label: 'Bestas', icon: PawPrint },
+  { id: 'eventos', label: 'Eventos', icon: CalendarClock },
   { id: 'economia', label: 'Economia', icon: Coins },
 ]
 
@@ -210,8 +213,14 @@ export function GuidePage() {
             <BeastGuide />
           </Section>
 
-          {/* 10 Economia */}
-          <Section id="economia" index="10" title="Economia" lead="Moeda, fragmentos, baús e aprimoramento: o que você ganha e onde gasta.">
+          {/* 10 Eventos */}
+          <Section id="eventos" index="10" title="Eventos" lead="Momentos raros que sempre acabam: etapas em sequência e prêmios por etapa, por concluir e por participar.">
+            <TermGrid terms={eventTerms} tone="var(--color-event-launch)" />
+            <EventGuide />
+          </Section>
+
+          {/* 11 Economia */}
+          <Section id="economia" index="11" title="Economia" lead="Moeda, fragmentos, baús e aprimoramento: o que você ganha e onde gasta.">
             <TermGrid terms={economyTerms} tone="var(--color-coin)" />
           </Section>
 
@@ -689,6 +698,31 @@ function DomGuide() {
           .map(([d, w]) => `${difficultyLabels[d as AiDifficulty] ?? d} ${fmt(w)}`)
           .join(' · ')}
         .
+      </p>
+    </div>
+  )
+}
+
+/** Os tipos de evento e os modificadores de regra (só texto: os números vêm de cada evento, na tela Eventos). */
+function EventGuide() {
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {eventKindOrder.map((kind) => {
+          const Icon = eventKindIcons[kind]
+          return (
+            <HoverCard key={kind} tone={eventKindColors[kind]} watermark={eventKindLabels[kind]}>
+              <p className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-(--tone)">
+                <Icon className="size-3.5" /> Tipo
+              </p>
+              <p className="font-display text-xl leading-tight font-bold uppercase tracking-wide text-silver-bright">{eventKindLabels[kind]}</p>
+              <p className="mt-1 text-sm leading-relaxed text-fg-muted transition-colors group-hover:text-fg">{eventKindText[kind]}</p>
+            </HoverCard>
+          )
+        })}
+      </div>
+      <p className="text-xs leading-relaxed text-fg-subtle">
+        Regras que um evento pode ligar: {Object.values(modifierLabels).join(', ')}. Cada evento mostra as dele, com os números, na tela Eventos.
       </p>
     </div>
   )

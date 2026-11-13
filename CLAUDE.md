@@ -190,6 +190,31 @@ peças em `beast-ui.tsx` (`BeastEmblem`, sem arquivo de arte: a pata na cor do g
 - Guia `#bestas` (`beastTerms` e `BeastGuide`), tutorial `bestas`. Admin: coleção `beasts` (`beast-form.tsx`, espelho de
   `BeastTemplate`; os passos mudam com o contrato) e "Dar besta" na aba Contas (`useGrantBeast`).
 
+## Eventos
+
+Momentos raros, sempre com fim (D155, D156): cada evento é uma lista de **etapas em sequência**, cada uma uma batalha PvE
+contra um squad de NPC. Rotas e tipos em `src/features/events/event-api.ts`; nomes, ícones, cores e textos (requisito,
+modificador, tipo) em `event-labels.ts` (tokens `event-*` no `index.css`, a caça usa a cor das bestas); hooks em
+`event-hooks.ts` (`useServerNow` com a hora do servidor, `phaseClock`, `useRewardCatalog` que acha o nome do prêmio pela
+`key`); peças em `event-ui.tsx` (`EventEmblem`, `EventKindTag`, `PhaseTag`, `RewardChip`/`RewardList`, `EventOutcomePanel`).
+**Fase, tentativas, requisitos e prêmios vêm do servidor** (`GET /events`): nenhum número escrito à mão.
+
+- `/eventos` (`events-page.tsx`, grupo Jogar; badge = prêmios na caixa): abertos, em breve ("começa em", sem entrar) e
+  encerrados em que a conta jogou; o detalhe com a contagem, tentativas, squad fixo (e os travados), campo, requisitos,
+  modificadores, a trilha das etapas (adversário, prêmio, captura na caça com a chance) e os prêmios de conclusão e
+  participação. `?evento=` escolhe. Jogar: `POST /events/:key/draft` abre o mesmo modal de Batalhar (`FieldSection` e
+  `SquadSection` de `src/features/battle/pre-battle.tsx`), com os avisos de requisito e squad travado por esquadrão
+  (`event-requirements.ts`, espelho de `eventRequirementError` só para orientar: **mudou lá, muda aqui**). Quem confere é
+  o `POST /battles` (400 com a mensagem).
+- Caixa de recompensas (`#caixa`, no topo de `/eventos`): equipamento e besta sem espaço; retirar (pede espaço), descartar
+  (com confirmação) e o prazo.
+- Fim da batalha: `result.eventOutcome` no `ResultOverlay` (e "Voltar ao evento") e no detalhe do Histórico
+  (`EventOutcomePanel`: etapa, captura, conclusão e cada prêmio com o status: na conta, repetido virou moeda, na caixa,
+  indisponível). Começar a batalha e o fim dela recarregam os eventos e a caixa.
+- Guia `#eventos` (`eventTerms` e `EventGuide`), tutorial `eventos`. Admin: coleção `events` (`event-form.tsx`, espelho de
+  `EventTemplate.create` e `catalogIntegrityError`; datas no `DateTimeField`, hora local e ISO para o servidor). Arte do topo:
+  `banner-eventos.jpg` (sem arquivo, fica a grade).
+
 ## Rodando
 
 - Backend: `npm run start:dev` no `origin-game` (porta 3333).
