@@ -196,6 +196,43 @@ export function NumberField({ label, value, onChange, step = 1, min, max, unit, 
   )
 }
 
+/** ISO (UTC) → valor do `datetime-local` (hora local do aparelho, sem segundos). */
+const toLocalInput = (iso: string) => {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+/** Data e hora: mostra na hora local do aparelho e devolve em ISO (UTC), o formato que o servidor guarda. */
+export function DateTimeField({ label, value, onChange, hint, error, required }: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  hint?: ReactNode
+  error?: string
+  required?: boolean
+}) {
+  const id = useId()
+  return (
+    <Field label={label} error={error} htmlFor={id} required={required}>
+      <ControlBox label={label} hint={hint} error={error}>
+        <input
+          id={id}
+          type="datetime-local"
+          value={toLocalInput(value)}
+          aria-invalid={error ? true : undefined}
+          onChange={(e) => {
+            const d = new Date(e.target.value)
+            if (!Number.isNaN(d.getTime())) onChange(d.toISOString())
+          }}
+          className={cn(inner, 'font-mono [color-scheme:dark]')}
+        />
+      </ControlBox>
+    </Field>
+  )
+}
+
 /** Lista de escolha. `emptyLabel`: permite "nenhum" (vira `null`). Seta própria: a nativa disputaria lugar com a dica. */
 export function SelectField({ label, value, onChange, options, hint, error, wide, emptyLabel, required }: {
   label: string

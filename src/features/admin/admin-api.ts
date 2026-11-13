@@ -8,7 +8,7 @@ import { api, apiErrorMessage, type ApiErrorBody } from '@/lib/api'
 
 // Rotas de admin (../origin-game/docs/api.md, "Admin"). Todas dão 403 para quem não é ADMIN.
 
-export type CatalogCollection = 'variants' | 'traits' | 'templates' | 'skills' | 'fields' | 'npc-squads' | 'awakenings' | 'gear' | 'beasts'
+export type CatalogCollection = 'variants' | 'traits' | 'templates' | 'skills' | 'fields' | 'npc-squads' | 'awakenings' | 'gear' | 'beasts' | 'events'
 
 /** Item no formato do corpo da edição (ligações pela `key`) mais os campos só de leitura. */
 export type CatalogItem = { key: string; name: string } & Record<string, unknown>
@@ -25,6 +25,7 @@ export type AdminCatalog = {
   awakenings: CatalogItem[]
   gear: CatalogItem[]
   beasts: CatalogItem[]
+  events: CatalogItem[]
 }
 
 /** Coleção da URL → chave na resposta de `GET /admin/catalog`. */
@@ -38,6 +39,7 @@ export const catalogKeys: Record<CatalogCollection, Exclude<keyof AdminCatalog, 
   awakenings: 'awakenings',
   gear: 'gear',
   beasts: 'beasts',
+  events: 'events',
 }
 
 /** Campos que o `GET /admin/catalog` traz e o `PUT` ignora. */

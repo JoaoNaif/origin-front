@@ -16,6 +16,7 @@ import type {
 import { rangeLabels, statLabels, statusLabels } from '@/features/game/game-labels'
 import type { GearGrade, GearKind, GearLineage } from '@/features/gear/gear-api'
 import type { BeastContract, BeastGrade } from '@/features/beasts/beast-api'
+import type { EventAttemptLimit, EventKind, EventModifier, EventRequirement, EventReward, EventSquadMode } from '@/features/events/event-api'
 
 // O que o formulário do admin precisa saber de cada corpo (../origin-game/src/infra/http/schemas/catalog.ts):
 // tipos, nomes em português, explicações e os valores de partida. As regras finas continuam no servidor.
@@ -158,6 +159,30 @@ export type BeastBody = {
   titles?: string[]
 }
 
+/**
+ * Evento (D155, D156): tipo, datas (ISO; anúncio <= início < fim), requisitos, tentativas, squad fixo ou livre, campo fixo,
+ * modificadores, etapas em sequência (cada uma um squad de NPC, com prêmios e, só na caça, a besta a capturar) e os
+ * prêmios de conclusão e de participação. As ligações vão pela `key`.
+ */
+export type EventBody = {
+  name: string
+  description: string | null
+  kind: EventKind
+  announceAt: string
+  startsAt: string
+  endsAt: string
+  requirements: EventRequirement[]
+  attemptLimit: EventAttemptLimit | null
+  squadMode: EventSquadMode
+  fieldKey: string | null
+  modifiers: EventModifier[]
+  stages: EventStageBody[]
+  completionRewards: EventReward[]
+  participationRewards: EventReward[]
+}
+
+export type EventStageBody = { name: string; npcSquadKey: string; rewards: EventReward[]; captureBeastKey: string | null }
+
 export type BeastSkillBody = {
   name: string
   description: string | null
@@ -200,6 +225,13 @@ export type AdminRules = {
   }
   /** Bestas: skills por besta (Dominância e Mestre) e requisitos do Mestre por grau. */
   beast?: { skillCount: number; masterRequirementCount: Record<BeastGrade, number> }
+  /** Eventos: limites de sanidade, chance de captura por grau (fração), bônus por falha e dias da caixa. */
+  event?: {
+    limits: { maxStages: number; maxRewardsPerList: number; maxRequirements: number; maxAttempts: number; maxCoins: number; maxFragments: number }
+    huntCaptureChance: Record<Exclude<BeastGrade, 'SACRED'>, number>
+    huntFailureBonus: number
+    rewardBoxDays: number
+  }
 }
 
 export const rarityLabels: Record<Rarity, string> = { E: 'E', D: 'D', C: 'C', B: 'B', A: 'A', S: 'S', SS: 'SS' }
@@ -537,6 +569,27 @@ export const emptyBodies: Record<CatalogCollection, () => Record<string, unknown
     lineage: 'ELEMENTAL',
     skills: [newBeastSkill('Mordida', 0.8, 0), newBeastSkill('Investida', 1.2, 2)],
   }),
+  // uma torre curta: anuncia agora, abre amanhã e fica uma semana; 1 piso com 150 M
+  events: (): EventBody => {
+    const day = 24 * 60 * 60 * 1000
+    const start = new Date(Math.ceil(Date.now() / day) * day)
+    return {
+      name: '',
+      description: null,
+      kind: 'TOWER',
+      announceAt: new Date().toISOString(),
+      startsAt: start.toISOString(),
+      endsAt: new Date(start.getTime() + 7 * day).toISOString(),
+      requirements: [],
+      attemptLimit: null,
+      squadMode: 'FREE',
+      fieldKey: null,
+      modifiers: [],
+      stages: [{ name: 'Piso 1', npcSquadKey: '', rewards: [{ type: 'COINS', amount: 150 }], captureBeastKey: null }],
+      completionRewards: [],
+      participationRewards: [],
+    }
+  },
 }
 
 /** Skill de besta em branco: golpe corpo a corpo de alvo único. */
@@ -625,6 +678,12 @@ export const collectionInfo: Record<CatalogCollection, { label: string; singular
     feminine: true,
     example: 'Ex.: Lobo de Cinzas, Dominância, Cavaleiro',
     help: 'Criaturas por contrato. O contrato (Dominância, Mestre ou Igualdade) vem fixo na besta; o grau fixa a força. Dominância e Mestre têm 2 skills em campo; a Igualdade não tem. Não saem de baú: o admin dá na aba Contas.',
+  },
+  events: {
+    label: 'Eventos',
+    singular: 'evento',
+    example: 'Ex.: Torre do Eco, 5 pisos, 3 tentativas por dia',
+    help: 'Momentos raros, sempre com fim: anúncio, início e fim. Cada evento é uma sequência de etapas (batalhas contra squads de NPC) com prêmios por etapa, por concluir e por participar. Mudar vale na hora; o evento em que alguém já jogou não se apaga.',
   },
 }
 
