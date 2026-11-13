@@ -60,6 +60,8 @@ export function TutorialProvider({ accountId, children }: { accountId: string; c
         return '/esquadroes'
       case 'bestas':
         return '/bestas'
+      case 'eventos':
+        return '/eventos'
       case 'arsenal':
         return '/arsenal'
       case 'batalhar':

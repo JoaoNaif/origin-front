@@ -94,6 +94,13 @@
   --color-contract-master: #c4b5fd;
   --color-contract-equality: #5eead4;
 
+  /* Eventos (D155): uma cor por tipo (torre, lançamento, caça, pesquisa, chefe único); a caça usa a cor das bestas */
+  --color-event-tower: #a5b4fc;
+  --color-event-launch: #f0abfc;
+  --color-event-hunt: var(--color-beast);
+  --color-event-research: #67e8f9;
+  --color-event-boss: #fb7185;
+
   /*
    * Arredondamento: quase reto, linguagem de HUD. Para destaque, usar o chanfro (`chamfer`).
    * control = input, célula da grade · card = card, painel · panel = modal, drawer · pill = avatar, ponto

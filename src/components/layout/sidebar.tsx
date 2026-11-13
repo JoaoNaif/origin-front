@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  CalendarClock,
   ChevronRight,
   History,
   House,
@@ -23,6 +24,7 @@ import { Logo, LogoMark } from '@/components/brand/logo'
 import { accountInitials, useLogout, useMe } from '@/features/auth/auth-api'
 import { useChests, useWallet } from '@/features/economy/economy-api'
 import { Coins } from '@/features/economy/economy-ui'
+import { useRewardBox } from '@/features/events/event-api'
 import { useSkillOffers } from '@/features/game/game-api'
 import { cn } from '@/lib/cn'
 
@@ -39,6 +41,7 @@ export function Sidebar({ collapsed, onToggleCollapsed, onNavigate }: SidebarPro
   const { data: offers } = useSkillOffers()
   const { data: chests } = useChests()
   const { data: account } = useMe()
+  const { data: rewardBox } = useRewardBox()
 
   const groups: { title: string; items: NavItem[] }[] = [
     {
@@ -46,6 +49,8 @@ export function Sidebar({ collapsed, onToggleCollapsed, onNavigate }: SidebarPro
       items: [
         { to: '/', label: 'Lobby', icon: House, end: true },
         { to: '/batalhar', label: 'Batalhar', icon: Swords },
+        // badge = prêmios esperando na caixa de recompensas (somem no prazo)
+        { to: '/eventos', label: 'Eventos', icon: CalendarClock, badge: rewardBox?.length },
       ],
     },
     {

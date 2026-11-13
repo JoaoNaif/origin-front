@@ -9,6 +9,7 @@ import { CharactersPage } from '@/pages/characters-page'
 import { ChestsPage } from '@/pages/chests-page'
 import { DesignPage } from '@/pages/design-page'
 import { BeastsPage } from '@/pages/beasts-page'
+import { EventsPage } from '@/pages/events-page'
 import { GearPage } from '@/pages/gear-page'
 import { GuidePage } from '@/pages/guide-page'
 import { HistoryPage } from '@/pages/history-page'
@@ -42,6 +43,7 @@ export const router = createBrowserRouter([
         children: [
           { path: '/', element: <HomePage /> },
           { path: '/batalhar', element: <PlayPage /> },
+          { path: '/eventos', element: <EventsPage /> },
           { path: '/personagens', element: <CharactersPage /> },
           { path: '/personagens/:id', element: <CharacterPage /> },
           { path: '/esquadroes', element: <SquadsPage /> },

@@ -117,6 +117,19 @@ export const beastTerms: { term: string; text: string }[] = [
   { term: 'Grau', text: 'Escudeiro, Cavaleiro, Mestre, Rei e a Sagrada. Quanto mais alto, mais forte e, no Mestre, mais requisitos.' },
 ]
 
+/** Eventos (D155, D156): o que é, em poucas frases. Os números de cada evento vêm de `GET /events`. */
+export const eventTerms: { term: string; text: string }[] = [
+  { term: 'Evento', text: 'Um momento raro, criado pelo admin, que sempre tem fim. Antes de abrir ele já aparece ("começa em..."), mas só dá para entrar entre o início e o fim.' },
+  { term: 'Etapa', text: 'Cada evento é uma sequência de batalhas contra a máquina: pisos da torre, o alvo da caça, o chefe. Só se joga a próxima depois de vencer a anterior. Perder não volta etapa.' },
+  { term: 'Tentativa', text: 'Conta quando a batalha começa. Alguns eventos têm limite por dia (vira à meia-noite UTC) ou no evento inteiro; outros, à vontade.' },
+  { term: 'Requisitos', text: 'Condições do esquadrão para entrar, conferidas a cada batalha: nível mínimo, quantos de uma classe, linhagem ou família, periculosidade mínima e raridade máxima.' },
+  { term: 'Squad fixo', text: 'Os 4 personagens da primeira batalha do evento ficam travados até o fim dele. A posição na grade pode mudar.' },
+  { term: 'Modificadores', text: 'Regras que mudam a batalha do evento: stats nivelados, Exaustão mais cedo, sem cura, Velocidade igual. Valem para os dois lados.' },
+  { term: 'Captura', text: 'Na caça, vencer dá uma chance de capturar a besta. A chance depende do grau e sobe a cada falha no mesmo evento. Falhou, a etapa não conta.' },
+  { term: 'Prêmios', text: 'Por etapa vencida, por concluir o evento e por participar (a primeira batalha terminada, vença ou perca). Desistir não conta nada. Personagem repetido vira moeda.' },
+  { term: 'Caixa de recompensas', text: 'Equipamento ou besta que não coube no inventário fica aqui por um prazo. Abra espaço e retire, ou descarte. Depois do prazo, some.' },
+]
+
 /** Equipamento vivo (D94, D153): o que é, em poucas frases. Números exatos vêm de `GET /gear-rules`. */
 export const gearTerms: { term: string; text: string }[] = [
   { term: 'Equipamento vivo', text: 'Arma ou armadura feita de minério vivo: tem vontade própria e escolhe quem a usa. Um por personagem; passa livremente entre os da conta.' },

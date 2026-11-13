@@ -1,6 +1,8 @@
 import {
   ArrowLeftRight,
   BookOpen,
+  CalendarClock,
+  Inbox,
   Clock,
   Coins as Coins3,
   Gem,
@@ -40,6 +42,8 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { BeastEmblem, ContractTag } from '@/features/beasts/beast-ui'
+import { eventKindOrder } from '@/features/events/event-labels'
+import { EventEmblem } from '@/features/events/event-ui'
 import { BondBadge, GearEmblem, RequirementChips } from '@/features/gear/gear-ui'
 import { fragmentLabels, rarityTone } from '@/features/economy/economy-labels'
 import { ChestArt, Coins, FragmentIcon } from '@/features/economy/economy-ui'
@@ -980,6 +984,95 @@ export const tutorials: Record<TutorialId, Tutorial> = {
     ],
   },
 
+  eventos: {
+    id: 'eventos',
+    title: 'Eventos',
+    summary: 'Momentos raros que sempre acabam: as etapas, as tentativas, os requisitos, os prêmios e a caixa de recompensas.',
+    steps: [
+      {
+        title: 'O que é um evento',
+        content: (
+          <StepLayout
+            lead="Um momento raro, criado pelo admin, que sempre tem fim. Antes de abrir ele já aparece, com a contagem até o início."
+            visual={
+              <div className="flex items-center justify-center gap-2.5">
+                {eventKindOrder.map((kind) => (
+                  <EventEmblem key={kind} kind={kind} size="sm" />
+                ))}
+              </div>
+            }
+            points={[
+              { icon: Clock, label: 'Datas', text: 'Anúncio, início e fim. Em breve: dá para ver tudo, mas só entra quando abrir.' },
+              { icon: Flag, label: 'Tipos', text: 'Torre, lançamento de personagem, caça, pesquisa e chefe único. Cada cor é um tipo.' },
+              { icon: CalendarClock, label: 'Vários', text: 'Pode haver mais de um evento aberto ao mesmo tempo. A lista mostra os abertos, os em breve e os que você jogou.' },
+            ]}
+          />
+        ),
+      },
+      {
+        title: 'Etapas e tentativas',
+        content: (
+          <StepLayout
+            lead={
+              <>
+                Cada evento é uma sequência de <Strong>etapas</Strong>, e cada etapa é uma batalha contra a máquina. Só se joga a próxima depois de
+                vencer a anterior.
+              </>
+            }
+            visual={
+              <div className="flex gap-1">
+                {[true, true, false, false, false].map((done, i) => (
+                  <span key={i} className={cn('h-2 w-10 -skew-x-12', done ? 'bg-event-tower' : i === 2 ? 'bg-event-tower/40' : 'bg-overlay')} />
+                ))}
+              </div>
+            }
+            points={[
+              { icon: Shield, label: 'Perder', text: 'Não volta etapa: tenta a mesma de novo. Cada etapa começa do zero, com vida cheia.' },
+              { icon: ListOrdered, label: 'Tentativas', text: 'Contam quando a batalha começa. Alguns eventos têm limite por dia (volta à meia-noite UTC); o chefe único tem uma só.' },
+              { icon: TrendingUp, label: 'Evolução', text: 'XP, DOM e despertar seguem valendo: os personagens evoluem durante o evento.' },
+            ]}
+          />
+        ),
+      },
+      {
+        title: 'Entrar',
+        content: (
+          <StepLayout
+            lead="Escolha o evento, jogue a próxima etapa e escolha o esquadrão. A tela avisa o que o esquadrão não cumpre."
+            visual={<Flow items={[{ icon: CalendarClock, label: 'Evento' }, { icon: Play, label: 'Etapa' }, { icon: LayoutGrid, label: 'Esquadrão' }, { icon: Swords, label: 'Batalha' }]} />}
+            points={[
+              { icon: Filter, label: 'Requisitos', text: 'Nível mínimo, quantos de uma classe, linhagem ou família, periculosidade e raridade. Conferidos a cada batalha.' },
+              { icon: Users, label: 'Squad fixo', text: 'Em alguns eventos, os 4 da primeira batalha ficam travados até o fim (a posição pode mudar).' },
+              { icon: ScrollText, label: 'Regras', text: 'Alguns eventos mudam a batalha: stats nivelados, sem cura, Exaustão mais cedo ou Velocidade igual.' },
+            ]}
+          />
+        ),
+      },
+      {
+        title: 'Prêmios e a caixa',
+        content: (
+          <StepLayout
+            lead="Cada etapa vencida dá um prêmio pequeno; concluir dá o principal; a primeira batalha terminada dá o de participação."
+            visual={
+              <div className="flex items-center justify-center gap-4">
+                <Coins value={150} className="text-sm font-bold text-silver-bright" />
+                <ChestArt tier="B" className="h-9 w-11" />
+                <GearEmblem kind="ARMOR" grade="MASTER" size="sm" />
+                <BeastEmblem grade="KNIGHT" contract="DOMINANCE" size="sm" />
+              </div>
+            }
+            points={[
+              { icon: Crosshair, label: 'Caça', text: 'Vencer dá uma chance de capturar a besta; falhou, a etapa não conta e a chance sobe.' },
+              { icon: Coins3, label: 'Repetido', text: 'Personagem que você já tem vira moeda, pelo valor da raridade.' },
+              { icon: Inbox, label: 'Caixa', text: 'Equipamento ou besta sem espaço no inventário vai para a caixa de recompensas, no topo desta tela. Retire antes do prazo.' },
+            ]}
+            tip="Desistir não conta nada: nem participação, nem etapa."
+          />
+        ),
+      },
+    ],
+  },
+
   arsenal: {
     id: 'arsenal',
     title: 'Arsenal',
@@ -1085,6 +1178,7 @@ export const guideTutorials: TutorialId[] = [
   'arsenal',
   'bestas',
   'batalhar',
+  'eventos',
   'batalha',
   'mercado',
   'baus',
@@ -1101,6 +1195,7 @@ export const tutorialIcons: Record<TutorialId, LucideIcon> = {
   formacao: Grid3x3,
   arsenal: Sword,
   bestas: PawPrint,
+  eventos: CalendarClock,
   batalhar: Swords,
   batalha: Crosshair,
   mercado: Store,

@@ -12,6 +12,7 @@ export type TutorialId =
   | 'formacao'
   | 'arsenal'
   | 'bestas'
+  | 'eventos'
   | 'batalhar'
   | 'batalha'
   | 'mercado'
