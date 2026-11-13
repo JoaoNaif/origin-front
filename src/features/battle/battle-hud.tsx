@@ -37,6 +37,7 @@ import { displayHp, toneText, type LogIcon, type LogTurn } from '@/features/batt
 import type { BattleLoot } from '@/features/economy/economy-api'
 import { rarityTone } from '@/features/economy/economy-labels'
 import { ChestArt, Coins, FragmentDeltaList } from '@/features/economy/economy-ui'
+import { EventOutcomePanel } from '@/features/events/event-ui'
 import { classIcons } from '@/features/game/class-icons'
 import { difficultyLabels, type Stat } from '@/features/game/game-api'
 import { endReasonLabels, profileLabels, statLabels, statShort } from '@/features/game/game-labels'
@@ -379,7 +380,7 @@ function LootPanel({ loot }: { loot: BattleLoot }) {
   )
 }
 
-/** Fim da batalha: resultado, motivo, o XP de cada um e o loot. */
+/** Fim da batalha: resultado, motivo, o XP de cada um, o loot e, no evento, o que rendeu nele. */
 export function ResultOverlay({ battle, onClose }: { battle: Battle; onClose: () => void }) {
   const result = battle.result
   if (!result) return null
@@ -388,13 +389,13 @@ export function ResultOverlay({ battle, onClose }: { battle: Battle; onClose: ()
   const names = new Map(battle.units.filter((u) => u.characterId).map((u) => [u.characterId!, u]))
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-black/70 p-4 backdrop-blur-sm">
       <div
         role="dialog"
         aria-modal
         aria-label={title}
         className={cn(
-          'chamfer relative w-full max-w-lg p-8 [--cut:24px]',
+          'chamfer relative m-auto w-full max-w-lg p-8 [--cut:24px]',
           won ? '[--chamfer-bg:rgb(18_18_22/0.97)] [--chamfer-border:rgb(61_214_140/0.5)]' : '[--chamfer-bg:rgb(18_18_22/0.97)] [--chamfer-border:rgb(229_72_77/0.5)]',
         )}
       >
@@ -449,6 +450,7 @@ export function ResultOverlay({ battle, onClose }: { battle: Battle; onClose: ()
         </div>
 
         {result.loot && <LootPanel loot={result.loot} />}
+        {result.eventOutcome && <EventOutcomePanel outcome={result.eventOutcome} className="mt-4" />}
 
         <div className="mt-8 flex flex-wrap justify-end gap-2">
           <Button variant="ghost" size="sm" onClick={onClose}>
@@ -457,9 +459,15 @@ export function ResultOverlay({ battle, onClose }: { battle: Battle; onClose: ()
           <Link to="/historico" className={buttonClasses({ size: 'sm', variant: 'secondary' })}>
             <History className="size-4" /> Histórico
           </Link>
-          <Link to="/batalhar" className={buttonClasses({ size: 'sm' })}>
-            <Swords className="size-4" /> Batalhar de novo
-          </Link>
+          {battle.event ? (
+            <Link to={result.eventOutcome ? `/eventos?evento=${result.eventOutcome.eventKey}` : '/eventos'} className={buttonClasses({ size: 'sm' })}>
+              <Swords className="size-4" /> Voltar ao evento
+            </Link>
+          ) : (
+            <Link to="/batalhar" className={buttonClasses({ size: 'sm' })}>
+              <Swords className="size-4" /> Batalhar de novo
+            </Link>
+          )}
         </div>
       </div>
     </div>

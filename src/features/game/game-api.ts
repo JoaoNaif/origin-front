@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query'
 import type { BattleLoot } from '@/features/economy/economy-api'
+import type { EventBattleOutcome } from '@/features/events/event-api'
 import type { CharacterBeast } from '@/features/beasts/beast-api'
 import type { CharacterGear } from '@/features/gear/gear-api'
 import { api } from '@/lib/api'
@@ -395,7 +396,11 @@ export type BattleDetail = {
     rewards: BattleReward[]
     /** Moeda, fragmentos e baú; nulo na desistência. */
     loot: BattleLoot | null
+    /** Batalha de evento: o que rendeu no evento; nulo fora de evento e na desistência. */
+    eventOutcome?: EventBattleOutcome | null
   } | null
+  /** Batalha de evento: o evento e a etapa (base 0). */
+  event?: { eventId: string; stage: number } | null
 }
 
 export function useBattle(id: string, enabled = true) {

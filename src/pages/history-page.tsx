@@ -9,6 +9,7 @@ import { DomChangeBadges } from '@/features/characters/dom-panel'
 import { buttonClasses } from '@/components/ui/button-classes'
 import { rarityTone } from '@/features/economy/economy-labels'
 import { ChestArt, Coins, FragmentDeltaList } from '@/features/economy/economy-ui'
+import { EventOutcomePanel } from '@/features/events/event-ui'
 import { CharacterPortrait } from '@/features/game/character-art'
 import { classIcons } from '@/features/game/class-icons'
 import {
@@ -411,12 +412,13 @@ function BattleRow({ battle, index, open, onToggle }: { battle: BattleSummary; i
   )
 }
 
-/** Detalhe sob demanda: `GET /battles/:id` traz o estado final das unidades, o XP e o loot. */
+/** Detalhe sob demanda: `GET /battles/:id` traz o estado final das unidades, o XP, o loot e o que rendeu no evento. */
 function BattleDetails({ battle }: { battle: BattleSummary }) {
   const detail = useBattle(battle.id)
   const squads = useSquads()
   const squadName = squads.data?.find((s) => s.id === battle.squadId)?.name
   const loot = detail.data?.result?.loot
+  const eventOutcome = detail.data?.result?.eventOutcome
 
   return (
     <div className="relative space-y-4 border-t border-line/70 bg-bg/40 px-4 py-5 motion-safe:animate-fade-in">
@@ -463,6 +465,7 @@ function BattleDetails({ battle }: { battle: BattleSummary }) {
               )}
             </div>
           )}
+          {eventOutcome && <EventOutcomePanel outcome={eventOutcome} />}
         </>
       )}
     </div>

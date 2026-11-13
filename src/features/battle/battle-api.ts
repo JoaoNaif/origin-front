@@ -17,6 +17,7 @@ import type {
 } from '@/features/game/game-api'
 import type { BeastContract, BeastGrade } from '@/features/beasts/beast-api'
 import type { BattleLoot } from '@/features/economy/economy-api'
+import type { EventBattleOutcome } from '@/features/events/event-api'
 import type { GearEffects, GearGrade, GearKind, GearLineage } from '@/features/gear/gear-api'
 import { api } from '@/lib/api'
 
@@ -136,7 +137,11 @@ export type Battle = {
     rewards: BattleReward[]
     /** Moeda, fragmentos e baú; nulo na desistência. */
     loot: BattleLoot | null
+    /** Batalha de evento (D155): etapa, captura e prêmios; nulo fora de evento e na desistência. Ausente em batalha antiga. */
+    eventOutcome?: EventBattleOutcome | null
   } | null
+  /** Batalha de evento: o evento e a etapa (base 0); nulo no PvE comum. */
+  event?: { eventId: string; stage: number } | null
   startedAt: string
 }
 
@@ -219,7 +224,7 @@ export type TurnOption = {
 export type BattleState = { battle: Battle; events: BattleEvent[] }
 
 /** Resposta de começar e de jogar: os eventos são só os desta jogada (e das vezes da máquina depois dela). */
-export type BattleStep = BattleState & { rewards: BattleReward[]; loot: BattleLoot | null }
+export type BattleStep = BattleState & { rewards: BattleReward[]; loot: BattleLoot | null; eventOutcome?: EventBattleOutcome | null }
 
 export const battleScreenKey = (id: string) => ['battle-screen', id] as const
 
@@ -247,6 +252,8 @@ export function useStartBattle() {
       // a tela da batalha abre com o estado que já veio, sem nova ida ao servidor
       queryClient.setQueryData<BattleState>(battleScreenKey(step.battle.id), { battle: step.battle, events: step.events })
       queryClient.invalidateQueries({ queryKey: ['me', 'battles'] })
+      // batalha de evento: a tentativa conta ao começar (e o squad fixo trava)
+      queryClient.invalidateQueries({ queryKey: ['events'] })
     },
   })
 }
@@ -283,12 +290,12 @@ export function useForfeit(id: string) {
   })
 }
 
-/** Fim da batalha: XP, níveis, blocos novos, moeda, fragmentos e baú mudam a conta. */
+/** Fim da batalha: XP, níveis, blocos novos, moeda, fragmentos e baú mudam a conta; no evento, o progresso e os prêmios. */
 export function useRefreshAfterBattle() {
   const queryClient = useQueryClient()
   return () =>
     Promise.all(
-      [['me', 'battles'], ['me', 'characters'], ['me', 'skill-offers'], ['characters'], ['me', 'wallet'], ['me', 'chests']].map((queryKey) =>
+      [['me', 'battles'], ['me', 'characters'], ['me', 'skill-offers'], ['characters'], ['me', 'wallet'], ['me', 'chests'], ['events'], ['me', 'reward-box'], ['me', 'gear'], ['me', 'beasts']].map((queryKey) =>
         queryClient.invalidateQueries({ queryKey }),
       ),
     )
